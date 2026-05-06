@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#F9F9F9" />
+  <title>ROBIN — маркетплейс ИИ-моделей</title>
+
+  <!-- Eruda — мобильная консоль прямо на странице.
+       После загрузки в правом нижнем углу появится зелёная кнопка-иконка.
+       Тап → откроется полноценная панель с логами, network, elements. -->
+  <script src="https://cdn.jsdelivr.net/npm/eruda@3"></script>
+  <script>
+    if (window.eruda) {
+      try { eruda.init(); } catch (e) {}
+    }
+  </script>
+
+  <!-- Tailwind play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React + ReactDOM (UMD) -->
+  <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+  <!-- lucide-react UMD -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide-react@0.383.0/dist/umd/lucide-react.min.js"></script>
+
+  <!-- Babel Standalone -->
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
+
+  <style>
+    body { background: #F9F9F9; margin: 0; }
+    .boot-fallback {
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+      color: #475569;
+      padding: 4rem 1.5rem;
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .boot-fallback h1 { font-size: 1.25rem; margin: 0 0 0.5rem; color: #0f172a; }
+    .boot-fallback code {
+      background: #fee2e2; color: #991b1b; padding: 0.5rem 0.75rem;
+      border-radius: 6px; font-size: 0.8125rem; display: block;
+      overflow-x: auto; white-space: pre-wrap; word-break: break-word;
+      text-align: left; margin-top: 1rem;
+    }
+    .boot-fallback small { display: block; margin-top: 0.5rem; color: #94a3b8; }
+    .boot-fallback details { margin-top: 1rem; text-align: left; font-size: 0.75rem; }
+    .boot-fallback details pre {
+      background: #f8fafc; color: #334155; padding: 0.5rem;
+      border-radius: 4px; overflow-x: auto; margin-top: 0.5rem;
+      max-height: 200px;
+    }
+    .boot-tip {
+      background: #fef3c7; color: #78350f; padding: 0.75rem 1rem;
+      border-radius: 8px; font-size: 0.875rem; margin-top: 1rem;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="boot-fallback">
+      <h1>Загрузка приложения…</h1>
+      <p>Подождите 5–10 секунд. Если страница так и не появится — увидите текст ошибки или
+         откройте зелёную кнопку Eruda внизу экрана для подробной отладки.</p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var $root = document.getElementById("root");
+
+      function showError(title, detail, stack) {
+        var safe = function (s) {
+          return String(s).replace(/[<&>]/g, function (c) {
+            return ({ "<": "&lt;", "&": "&amp;", ">": "&gt;" })[c];
+          });
+        };
+        var html =
+          '<div class="boot-fallback">' +
+            '<h1>' + safe(title) + '</h1>' +
+            '<code>' + safe(detail) + '</code>';
+        if (stack) {
+          html +=
+            '<details>' +
+              '<summary>Stack trace</summary>' +
+              '<pre>' + safe(stack) + '</pre>' +
+            '</details>';
+        }
+        html +=
+            '<div class="boot-tip">' +
+              '💡 Тапните по зелёной кнопке Eruda (правый нижний угол) — там будут все логи и network.' +
+            '</div>' +
+          '</div>';
+        $root.innerHTML = html;
+      }
+
+      // Глобальные перехватчики
+      window.addEventListener("error", function (ev) {
+        console.error("[bootstrap] window error:", ev.error || ev.message);
+      });
+      window.addEventListener("unhandledrejection", function (ev) {
+        console.error("[bootstrap] unhandled promise:", ev.reason);
+      });
+
+      function bootstrap() {
+        try {
+          if (!window.React)    throw new Error("React UMD не загрузился (jsDelivr недоступен?)");
+          if (!window.ReactDOM) throw new Error("ReactDOM UMD не загрузился");
+          if (!window.Babel)    throw new Error("Babel Standalone не загрузился");
+
+          var LucideReact = window.LucideReact || window.lucideReact || window.lucide || window["lucide-react"];
+          if (!LucideReact) {
+            var found = Object.keys(window).filter(function (k) { return /lucide/i.test(k); });
+            throw new Error("lucide-react UMD: глобал не найден. Близкие имена в window: " + (found.join(", ") || "нет"));
+          }
+          window.LucideReact = LucideReact;
+
+          fetch("./robin_marketplace.jsx", { cache: "no-cache" })
+            .then(function (response) {
+              if (!response.ok) {
+                throw new Error("HTTP " + response.status + " при загрузке robin_marketplace.jsx");
+              }
+              return response.text();
+            })
+            .then(function (source) {
+              // Pre-process: убираем ESM-конструкции
+              var processed = source
+                .replace(
+                  /import\s*\{([\s\S]*?)\}\s*from\s*["']react["']\s*;?/g,
+                  function (_, names) { return "const {" + names + "} = React;"; }
+                )
+                .replace(
+                  /import\s*\{([\s\S]*?)\}\s*from\s*["']lucide-react["']\s*;?/g,
+                  function (_, names) { return "const {" + names + "} = LucideReact;"; }
+                )
+                .replace(/import\s+\w+\s+from\s+["'][^"']+["']\s*;?/g, "")
+                .replace(/export\s+default\s+function\s+(\w+)/, "var App = function $1")
+                .replace(/export\s+default\s+/g, "var App = ")
+                .replace(/export\s*\{[\s\S]*?\}\s*;?/g, "");
+
+              var transformed = window.Babel.transform(processed, {
+                presets: [["react", { runtime: "classic" }]],
+                sourceType: "script",
+                filename: "robin_marketplace.jsx",
+              });
+
+              var factory = new Function(
+                "React", "LucideReact",
+                transformed.code + "\nreturn typeof App === 'function' ? App : null;"
+              );
+              var App = factory(window.React, window.LucideReact);
+
+              if (typeof App !== "function") {
+                throw new Error("В robin_marketplace.jsx не найден `export default` с компонентом App");
+              }
+
+              // ─── ErrorBoundary ──────────────────────────────────────────
+              // Если внутри App что-то упадёт во время рендера — мы перехватим
+              // и покажем на странице, а не оставим белый экран.
+              var React = window.React;
+              function ErrorBoundary(props) {
+                var state = React.useState(null);
+                var setError = state[1];
+                var error    = state[0];
+
+                // Ловим ошибки в дочерних. Hook-вариант не покрывает render-фазу,
+                // поэтому делаем класс-компонент через прокси.
+                return React.createElement(
+                  ClassErrorBoundary,
+                  { onError: setError },
+                  error
+                    ? React.createElement("div", { className: "boot-fallback" },
+                        React.createElement("h1", null, "Ошибка в приложении"),
+                        React.createElement("code", null, String(error.message || error)),
+                        error.stack && React.createElement("details", null,
+                          React.createElement("summary", null, "Stack trace"),
+                          React.createElement("pre", null, error.stack)
+                        ),
+                        React.createElement("div", { className: "boot-tip" },
+                          "💡 Тапните зелёную кнопку Eruda внизу экрана для подробного лога."
+                        )
+                      )
+                    : props.children
+                );
+              }
+
+              var ClassErrorBoundary = (function () {
+                function ClassErrorBoundary(props) {
+                  React.Component.call(this, props);
+                  this.state = { error: null };
+                }
+                ClassErrorBoundary.prototype = Object.create(React.Component.prototype);
+                ClassErrorBoundary.getDerivedStateFromError = function (error) {
+                  return { error: error };
+                };
+                ClassErrorBoundary.prototype.componentDidCatch = function (error, info) {
+                  console.error("[App ErrorBoundary]", error, info);
+                };
+                ClassErrorBoundary.prototype.render = function () {
+                  if (this.state.error) {
+                    return React.createElement("div", { className: "boot-fallback" },
+                      React.createElement("h1", null, "Ошибка в приложении"),
+                      React.createElement("code", null,
+                        String((this.state.error.message || this.state.error) + "")
+                      ),
+                      this.state.error.stack && React.createElement("details", null,
+                        React.createElement("summary", null, "Stack trace"),
+                        React.createElement("pre", null, this.state.error.stack)
+                      ),
+                      React.createElement("div", { className: "boot-tip" },
+                        "💡 Тапните зелёную кнопку Eruda внизу экрана для подробного лога."
+                      )
+                    );
+                  }
+                  return this.props.children;
+                };
+                return ClassErrorBoundary;
+              })();
+
+              // Рендер
+              $root.innerHTML = "";
+              window.ReactDOM.createRoot($root).render(
+                window.React.createElement(
+                  ClassErrorBoundary,
+                  null,
+                  window.React.createElement(App)
+                )
+              );
+            })
+            .catch(function (err) {
+              console.error("[bootstrap]", err);
+              showError("Не удалось запустить приложение", err.message || err, err.stack);
+            });
+        } catch (err) {
+          console.error("[bootstrap]", err);
+          showError("Ошибка инициализации", err.message || err, err.stack);
+        }
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", bootstrap);
+      } else {
+        bootstrap();
+      }
+    })();
+  </script>
+</body>
+</html>
