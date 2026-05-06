@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#F9F9F9" />
+  <title>ROBIN — маркетплейс ИИ-моделей</title>
+
+  <!--
+    Все зависимости через jsDelivr — он стабильно отвечает в российских
+    мобильных сетях (включая 4G/5G на Android). Никаких import maps,
+    никакого esm.sh — только классические UMD-сборки + window-глобалы.
+  -->
+
+  <!-- Tailwind play CDN — для on-the-fly стилизации классов из jsx -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React + ReactDOM (UMD, прод-сборка). Кладут window.React и window.ReactDOM -->
+  <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+  <!-- lucide-react UMD — кладёт window.LucideReact -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide-react@0.383.0/dist/umd/lucide-react.min.js"></script>
+
+  <!-- Babel Standalone для on-the-fly трансформации JSX -->
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
+
+  <style>
+    body { background: #F9F9F9; margin: 0; }
+    .boot-fallback {
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+      color: #475569;
+      padding: 4rem 1.5rem;
+      text-align: center;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .boot-fallback h1 { font-size: 1.25rem; margin: 0 0 0.5rem; color: #0f172a; }
+    .boot-fallback code {
+      background: #fee2e2; color: #991b1b; padding: 0.5rem 0.75rem;
+      border-radius: 6px; font-size: 0.8125rem; display: block;
+      overflow-x: auto; white-space: pre-wrap; word-break: break-word;
+      text-align: left; margin-top: 1rem;
+    }
+    .boot-fallback small { display: block; margin-top: 0.5rem; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="boot-fallback">
+      <h1>Загрузка приложения…</h1>
+      <p>Подождите 5–10 секунд. Если страница так и не появится — ниже будет текст ошибки.</p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var $root = document.getElementById("root");
+
+      function showError(title, detail) {
+        var safe = String(detail).replace(/[<&>]/g, function (c) {
+          return ({ "<": "&lt;", "&": "&amp;", ">": "&gt;" })[c];
+        });
+        $root.innerHTML =
+          '<div class="boot-fallback">' +
+            '<h1>' + title + '</h1>' +
+            '<code>' + safe + '</code>' +
+            '<small>F12 → Console — там полный стектрейс.</small>' +
+          '</div>';
+      }
+
+      window.addEventListener("error", function (ev) {
+        console.error("[bootstrap] window error:", ev.error || ev.message);
+      });
+      window.addEventListener("unhandledrejection", function (ev) {
+        console.error("[bootstrap] unhandled promise:", ev.reason);
+      });
+
+      function bootstrap() {
+        try {
+          // 1. Проверяем что все CDN-скрипты загрузились
+          if (!window.React)    throw new Error("React UMD не загрузился (jsDelivr недоступен?)");
+          if (!window.ReactDOM) throw new Error("ReactDOM UMD не загрузился");
+          if (!window.Babel)    throw new Error("Babel Standalone не загрузился");
+
+          // lucide-react UMD кладёт глобал под одним из этих имён в зависимости от версии
+          var LucideReact = window.LucideReact || window.lucideReact || window.lucide || window["lucide-react"];
+          if (!LucideReact) {
+            throw new Error("lucide-react UMD: глобальная переменная не найдена. Доступные globals: " +
+              Object.keys(window).filter(function (k) { return /lucide/i.test(k); }).join(", "));
+          }
+          window.LucideReact = LucideReact;
+
+          // 2. Качаем файл .jsx
+          fetch("./robin_marketplace.jsx", { cache: "no-cache" })
+            .then(function (response) {
+              if (!response.ok) {
+                throw new Error("HTTP " + response.status + " при загрузке robin_marketplace.jsx");
+              }
+              return response.text();
+            })
+            .then(function (source) {
+              // 3. Pre-process: заменяем ESM import/export на доступ к window-глобалам.
+              //    После этого Babel сможет обработать код в режиме "script".
+              var processed = source
+                // import { useState, useEffect } from "react"   →   const { useState, useEffect } = React;
+                .replace(
+                  /import\s*\{([\s\S]*?)\}\s*from\s*["']react["']\s*;?/g,
+                  function (_, names) { return "const {" + names + "} = React;"; }
+                )
+                // import { ArrowRight, ... } from "lucide-react"   →   const { ... } = LucideReact;
+                .replace(
+                  /import\s*\{([\s\S]*?)\}\s*from\s*["']lucide-react["']\s*;?/g,
+                  function (_, names) { return "const {" + names + "} = LucideReact;"; }
+                )
+                // На всякий случай — любые другие default-import'ы
+                .replace(/import\s+\w+\s+from\s+["'][^"']+["']\s*;?/g, "")
+                // export default function App   →   var App = function App
+                .replace(/export\s+default\s+function\s+(\w+)/, "var App = function $1")
+                // export default <expr>   →   var App = <expr>
+                .replace(/export\s+default\s+/g, "var App = ")
+                // Любой `export { ... }` — просто удалить
+                .replace(/export\s*\{[\s\S]*?\}\s*;?/g, "");
+
+              // 4. Babel — переводим JSX в React.createElement-вызовы (classic runtime).
+              //    sourceType: "script" — теперь это допустимо, потому что мы убрали все import/export.
+              var transformed = window.Babel.transform(processed, {
+                presets: [["react", { runtime: "classic" }]],
+                sourceType: "script",
+                filename: "robin_marketplace.jsx",
+              });
+
+              // 5. Выполняем код в IIFE с явно проброшенными React/LucideReact.
+              //    new Function вместо eval — корректнее по scope, и быстрее.
+              //    Возвращаем App, который определён внутри файла как `var App`.
+              var factory = new Function(
+                "React", "LucideReact",
+                transformed.code + "\nreturn typeof App === 'function' ? App : null;"
+              );
+              var App = factory(window.React, window.LucideReact);
+
+              if (typeof App !== "function") {
+                throw new Error("В robin_marketplace.jsx не найден `export default` с компонентом App");
+              }
+
+              // 6. Рендерим
+              $root.innerHTML = "";
+              window.ReactDOM.createRoot($root).render(window.React.createElement(App));
+            })
+            .catch(function (err) {
+              console.error("[bootstrap]", err);
+              showError("Не удалось запустить приложение", err.message || err);
+            });
+        } catch (err) {
+          console.error("[bootstrap]", err);
+          showError("Ошибка инициализации", err.message || err);
+        }
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", bootstrap);
+      } else {
+        bootstrap();
+      }
+    })();
+  </script>
+</body>
+</html>
