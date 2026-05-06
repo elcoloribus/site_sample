@@ -21,6 +21,7 @@ import {
   Bot,
   Cpu,
   FileCheck,
+  FileText,
   Layers,
   CheckCircle2,
   Plug,
@@ -715,9 +716,9 @@ function HeroSection({ onCatalog, onSandbox }) {
             </h1>
 
             <p className="text-lg text-slate-600 leading-relaxed max-w-xl mb-10">
-              Готовые на 80% модели-шаблоны, агенты и RPA-сценарии для ИТ-команд.
-              Сокращайте время разработки и внедрения интеллектуальных решений в 5 раз —
-              без боли с инфраструктурой и ключами к LLM.
+              Маркетплейс готовых ИИ-агентов и RPA-сценариев для ИТ-команд.
+              Сократите разработку в 5 раз благодаря преднастроенной
+              инфраструктуре и встроенному доступу к LLM
             </p>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -913,8 +914,8 @@ function BusinessValueSection() {
             </h2>
           </div>
           <p className="text-lg text-slate-600 leading-relaxed self-end">
-            Не SaaS, а распространяемый шаблон, который ваша команда дорабатывает
-            под себя в собственном контуре. Полный контроль над данными и логикой.
+            Настраиваемый ИИ-агент для развертывания в собственном контуре.
+            Полная конфиденциальность данных и гибкая доработка логики
           </p>
         </div>
 
@@ -923,21 +924,21 @@ function BusinessValueSection() {
             theme="amber"
             icon={Lock}
             title="Безопасная среда"
-            description="Запускайте любой модель в изолированной песочнице ROBIN. Доступ к LLM, тестовым данным и эмуляторам интеграций — без рисков для боевого контура."
+            description="Песочница ROBIN: безопасный запуск моделей. Тестируйте ИИ-агентов с доступом к LLM и эмуляторам систем без рисков для продакшна"
             mockup={<SandboxMockup />}
           />
           <IndustryCard
             theme="rose"
             icon={Sparkles}
             title="No-code настройка"
-            description="80% логики уже собрано. Оставшиеся 20% — ваша бизнес-специфика — настраиваются визуально в ROBIN Studio. Без переписывания кода и привлечения вендора."
+            description="80% готово — 20% настраиваете вы. Визуальный редактор ROBIN Studio: адаптируйте агентов под свои процессы без программирования"
             mockup={<NoCodeMockup />}
           />
           <IndustryCard
             theme="sky"
             icon={Layers}
             title="Готовые сценарии ROBIN"
-            description="Каждый модель со статусом «Проверено» прошёл аудит безопасности, проверку зависимостей и совместимости с корпоративным контуром. Соответствует 152-ФЗ."
+            description="Проверенные решения для вашего контура. Каждая модель прошла аудит безопасности и проверку зависимостей. Полное соответствие 152-ФЗ"
             mockup={<ReadyScenariosMockup />}
           />
         </div>
@@ -1267,7 +1268,7 @@ function MetricsBand() {
   const metrics = [
     { value: "250+", label: "моделей в каталоге" },
     { value: "80%", label: "готовности из коробки" },
-    { value: "5×", label: "ускорение time-to-production" },
+    { value: "5×", label: "Сокращение цикла внедрения" },
     { value: "40+", label: "MCP-коннекторов" },
   ];
   return (
@@ -1308,8 +1309,8 @@ function CtaFooterBlock({ onSandbox, onCatalog }) {
               <span className="font-display italic text-red-700">без обязательств</span>
             </h2>
             <p className="text-lg text-slate-600 leading-relaxed mb-8">
-              Разверните любой модель в изолированной среде за 3 минуты. API-ключи к
-              LLM не требуются — провайдер уже подключён.
+              Разверните любую модель в изолированной среде за 3 минуты. API-ключи к
+              LLM не требуются — провайдер уже подключён
             </p>
             <div className="flex flex-wrap gap-3">
               <PrimaryButton onClick={onSandbox} icon={<Play className="w-4 h-4" />}>
@@ -1478,6 +1479,9 @@ const CATALOG_MODELS = [
   {
     id: "claude-4-6-sonnet",
     name: "Claude 4.6 Sonnet",
+    priceIn: 3.0,
+    priceOut: 15.0,
+    contextK: 1000,
     category: "Финансы",
     provider: "Anthropic",
     capability: "Текст",
@@ -1500,6 +1504,9 @@ const CATALOG_MODELS = [
   {
     id: "gpt-5",
     name: "GPT-5",
+    priceIn: 1.25,
+    priceOut: 10.0,
+    contextK: 400,
     category: "Продажи",
     provider: "OpenAI",
     capability: "Текст",
@@ -1522,6 +1529,9 @@ const CATALOG_MODELS = [
   {
     id: "gemini-3-1-pro",
     name: "Gemini 3.1 Pro",
+    priceIn: 2.0,
+    priceOut: 12.0,
+    contextK: 1000,
     category: "HR",
     provider: "Google",
     capability: "Видение",
@@ -1544,6 +1554,9 @@ const CATALOG_MODELS = [
   {
     id: "llama-4-maverick",
     name: "Llama 4 Maverick",
+    priceIn: 0.2,
+    priceOut: 0.6,
+    contextK: 130,
     category: "Сервис",
     provider: "Meta",
     capability: "Видение",
@@ -1566,6 +1579,9 @@ const CATALOG_MODELS = [
   {
     id: "mistral-large-3",
     name: "Mistral Large 3",
+    priceIn: 0.5,
+    priceOut: 1.5,
+    contextK: 256,
     category: "Производство",
     provider: "Mistral",
     capability: "Текст",
@@ -1588,6 +1604,9 @@ const CATALOG_MODELS = [
   {
     id: "grok-4",
     name: "Grok 4",
+    priceIn: 3.0,
+    priceOut: 15.0,
+    contextK: 256,
     category: "Финансы",
     provider: "x.ai",
     capability: "Текст",
@@ -1610,6 +1629,9 @@ const CATALOG_MODELS = [
   {
     id: "deepseek-v3-2",
     name: "DeepSeek V3.2",
+    priceIn: 0.26,
+    priceOut: 0.38,
+    contextK: 160,
     category: "Производство",
     provider: "DeepSeek",
     capability: "Текст",
@@ -1632,6 +1654,9 @@ const CATALOG_MODELS = [
   {
     id: "sonar-pro",
     name: "Sonar Pro",
+    priceIn: 3.0,
+    priceOut: 15.0,
+    contextK: 200,
     category: "Продажи",
     provider: "Perplexity",
     capability: "Поиск",
@@ -1654,6 +1679,9 @@ const CATALOG_MODELS = [
   {
     id: "dall-e-3",
     name: "DALL·E 3",
+    priceIn: 0.04,
+    priceOut: 0.0,
+    contextK: 4,
     category: "Сервис",
     provider: "OpenAI",
     capability: "Изображение",
@@ -1716,6 +1744,8 @@ function CatalogChips({ selectedSet, onToggle }) {
 
 function ModelCard({ model, delay = 0, onClick }) {
   const capStyle = CAP_BADGE[model.capability] || CAP_BADGE["Текст"];
+  const fmtCtx = (k) => (k >= 1000 ? `${k / 1000}M` : `${k}K`);
+  const fmtPrice = (v) => `$${v.toFixed(2)}/MTok`;
   return (
     <article
       onClick={onClick}
@@ -1741,9 +1771,37 @@ function ModelCard({ model, delay = 0, onClick }) {
         />
         <span className="text-slate-500 font-medium">{model.provider}</span>
       </div>
-      <p className="text-sm text-slate-600 leading-relaxed">
+      <p className="text-sm text-slate-600 leading-relaxed mb-5 flex-1">
         {model.description}
       </p>
+
+      {/* Metrics row under divider */}
+      <div className="pt-4 mt-auto border-t border-slate-100">
+        <div className="flex items-center gap-3 text-xs flex-wrap">
+          <span className="inline-flex items-center gap-1.5 text-slate-500">
+            <Terminal className="w-3.5 h-3.5 text-slate-400" strokeWidth={2} />
+            <span className="font-mono">
+              <span className="text-slate-900 font-semibold">
+                {fmtPrice(model.priceIn)}
+              </span>
+            </span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-slate-500">
+            <FileText className="w-3.5 h-3.5 text-slate-400" strokeWidth={2} />
+            <span className="font-mono">
+              <span className="text-slate-900 font-semibold">
+                {fmtPrice(model.priceOut)}
+              </span>
+            </span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-slate-500">
+            <Box className="w-3.5 h-3.5 text-slate-400" strokeWidth={2} />
+            <span className="font-mono text-slate-900 font-semibold">
+              {fmtCtx(model.contextK)}
+            </span>
+          </span>
+        </div>
+      </div>
     </article>
   );
 }
@@ -1811,9 +1869,12 @@ function FilterGroup({ label, options, selected, onSelect, counts }) {
             >
               <span className="font-medium">{option}</span>
               <span
-                className={`text-xs font-mono ${
-                  active ? "text-slate-300" : "text-slate-400"
+                className={`inline-flex items-center justify-center h-6 px-2 rounded-full text-xs font-mono font-semibold border transition-colors duration-200 ${
+                  active
+                    ? "bg-white/15 text-white border-white/20"
+                    : "bg-slate-50 text-slate-600 border-slate-200"
                 }`}
+                style={{ minWidth: 28 }}
               >
                 {counts?.[option] ?? 0}
               </span>
@@ -2491,14 +2552,14 @@ function ContactsView({ authorFormSubmitted, setAuthorFormSubmitted }) {
       {/* Header */}
       <div className="border-b border-slate-200/60">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16 lg:py-20">
-          <SectionLabel>Contact us</SectionLabel>
+          <SectionLabel>Контакты</SectionLabel>
           <h1 className="text-4xl lg:text-5xl tracking-tight text-slate-900 leading-tight mb-4">
             Свяжитесь с командой{" "}
             <span className="font-display italic text-red-700">ROBIN</span>
           </h1>
           <p className="text-lg text-slate-600 max-w-2xl">
-            Подберём подходящий модель под вашу задачу, организуем демо в Sandbox или
-            обсудим публикацию вашего шаблона на маркетплейсе.
+            Найдите идеальную модель для своих задач, протестируйте её в
+            песочнице или станьте автором на нашем маркетплейсе
           </p>
         </div>
       </div>
@@ -2508,7 +2569,7 @@ function ContactsView({ authorFormSubmitted, setAuthorFormSubmitted }) {
         <div className="grid lg:grid-cols-2 gap-12">
           <div>
             <div className="text-xs font-mono uppercase tracking-wider text-slate-500 mb-3">
-              Группа компаний ROBIN
+              ROBIN
             </div>
 
             <div className="space-y-1 mb-10">
@@ -2908,7 +2969,7 @@ function Footer({ setActiveTab }) {
           </button>
           <p className="text-sm text-slate-500 leading-relaxed">
             Маркетплейс ИИ-агентов, RPA-сценариев и MCP-коннекторов для корпоративного
-            сектора.
+            сектора
           </p>
         </div>
 
