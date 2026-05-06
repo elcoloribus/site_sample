@@ -78,8 +78,8 @@
       //    они будут резолвиться через import map.
       const transformed = window.Babel.transform(source, {
         presets: [
-          ["env",  { modules: false, targets: { esmodules: true } }],
-          "react"
+          ["env",   { modules: false, targets: { esmodules: true } }],
+          ["react", { runtime: "automatic" }]
         ],
         sourceType: "module",
         filename: "robin_marketplace.jsx",
