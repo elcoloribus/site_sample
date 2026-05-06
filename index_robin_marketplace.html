@@ -1,17 +1,113 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>React JSX Demo</title>
-  <!-- React и ReactDOM -->
-  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-  <!-- Babel для компиляции JSX на лету в браузере -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ROBIN — маркетплейс ИИ-моделей</title>
+
+  <!-- Tailwind CSS через CDN (на лету компилирует классы из jsx) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!--
+    Import map — рисует bare-module specifiers ("react", "lucide-react" и т. п.)
+    в реальные ESM-ссылки. Это позволяет коду внутри jsx писать
+    `import { useState } from "react"` без сборщика.
+  -->
+  <script type="importmap">
+  {
+    "imports": {
+      "react":             "https://esm.sh/react@18.3.1",
+      "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+      "react-dom":         "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client":  "https://esm.sh/react-dom@18.3.1/client",
+      "lucide-react":      "https://esm.sh/lucide-react@0.383.0?deps=react@18.3.1"
+    }
+  }
+  </script>
+
+  <!-- Babel Standalone (положит window.Babel) -->
+  <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+
+  <style>
+    body { background: #F9F9F9; margin: 0; }
+    .boot-fallback {
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+      color: #475569;
+      padding: 4rem 1.5rem;
+      text-align: center;
+    }
+    .boot-fallback h1 { font-size: 1.25rem; margin: 0 0 0.5rem; color: #0f172a; }
+    .boot-fallback code {
+      background: #fee2e2; color: #991b1b; padding: 0.25rem 0.5rem;
+      border-radius: 6px; font-size: 0.875rem; display: inline-block;
+      max-width: 100%; overflow-x: auto; white-space: pre-wrap; text-align: left;
+    }
+  </style>
 </head>
 <body>
-  <div id="root"></div>
-  <!-- Подключаем JSX с типом text/babel -->
-  <script type="text/babel" src="robin_marketplace.jsx"></script>
+  <!-- Пока бутстрап грузится, показываем простой плейсхолдер.
+       Скрипт ниже его перезапишет, как только App смонтируется. -->
+  <div id="root">
+    <div class="boot-fallback">
+      <h1>Загрузка приложения…</h1>
+      <p>Если страница висит дольше 5–10 секунд, откройте консоль браузера
+         (F12 → Console) — ниже появится точная ошибка.</p>
+    </div>
+  </div>
+
+  <script type="module">
+    const $root = document.getElementById("root");
+    const showError = (title, detail) => {
+      $root.innerHTML = `
+        <div class="boot-fallback">
+          <h1>${title}</h1>
+          <code>${String(detail).replace(/[<&>]/g, c => ({"<":"&lt;","&":"&amp;",">":"&gt;"}[c]))}</code>
+        </div>`;
+    };
+
+    try {
+      // 1. Качаем jsx-файл как обычный текст.
+      const response = await fetch("./robin_marketplace.jsx");
+      if (!response.ok) {
+        throw new Error("HTTP " + response.status + " при загрузке robin_marketplace.jsx");
+      }
+      const source = await response.text();
+
+      // 2. Транспилируем JSX в обычный JS,
+      //    но СОХРАНЯЕМ import/export (modules: false) —
+      //    они будут резолвиться через import map.
+      const transformed = window.Babel.transform(source, {
+        presets: [
+          ["env",   { modules: false, targets: { esmodules: true } }],
+          ["react", { runtime: "automatic" }]
+        ],
+        sourceType: "module",
+        filename: "robin_marketplace.jsx",
+      });
+
+      // 3. Делаем из получившегося ESM-кода Blob URL,
+      //    чтобы импортнуть как настоящий модуль.
+      const blob = new Blob([transformed.code], { type: "application/javascript" });
+      const blobUrl = URL.createObjectURL(blob);
+
+      // 4. Импортируем модуль. Все его внутренние import'ы
+      //    (react, react-dom, lucide-react) проходят через import map выше.
+      const mod = await import(blobUrl);
+      URL.revokeObjectURL(blobUrl);
+
+      if (typeof mod.default !== "function") {
+        throw new Error("В robin_marketplace.jsx нет `export default` с компонентом App");
+      }
+
+      // 5. Монтируем приложение.
+      const React            = await import("react");
+      const { createRoot }   = await import("react-dom/client");
+      $root.innerHTML = "";
+      createRoot($root).render(React.createElement(mod.default));
+    } catch (err) {
+      console.error(err);
+      showError("Не удалось запустить приложение", err.message || err);
+    }
+  </script>
 </body>
 </html>
