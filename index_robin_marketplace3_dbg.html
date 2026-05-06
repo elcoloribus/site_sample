@@ -127,7 +127,54 @@
               return response.text();
             })
             .then(function (source) {
-              // Pre-process: убираем ESM-конструкции
+              // ─── Шаг 1: проверяем, что все нужные lucide-иконки есть в UMD-bundle ───
+              // Извлекаем имена из всех import { ... } from "lucide-react"
+              var iconNames = [];
+              var importRe = /import\s*\{([^}]+)\}\s*from\s*["']lucide-react["']/g;
+              var m;
+              while ((m = importRe.exec(source)) !== null) {
+                m[1].split(",").forEach(function (raw) {
+                  var name = raw.trim().split(/\s+as\s+/)[0].trim();
+                  if (name && iconNames.indexOf(name) === -1) iconNames.push(name);
+                });
+              }
+
+              // Универсальная заглушка-иконка (16×16 SVG-кружок) на случай отсутствия
+              var React = window.React;
+              var FallbackIcon = function (props) {
+                return React.createElement("svg", {
+                  width: props.size || 16, height: props.size || 16,
+                  viewBox: "0 0 24 24", fill: "none",
+                  stroke: "currentColor", strokeWidth: 2,
+                  className: props.className, style: props.style,
+                }, React.createElement("circle", { cx: 12, cy: 12, r: 9 }));
+              };
+
+              // Кладём в LucideReact то, чего там нет.
+              // Также проверяем суффикс "Icon" (новые версии lucide-react могут переименовать)
+              var missing = [];
+              iconNames.forEach(function (name) {
+                if (typeof window.LucideReact[name] !== "function" &&
+                    typeof window.LucideReact[name] !== "object") {
+                  // Пробуем `<Name>Icon`
+                  if (typeof window.LucideReact[name + "Icon"] === "function") {
+                    window.LucideReact[name] = window.LucideReact[name + "Icon"];
+                  } else {
+                    window.LucideReact[name] = FallbackIcon;
+                    missing.push(name);
+                  }
+                }
+              });
+              if (missing.length) {
+                console.warn(
+                  "[bootstrap] lucide-react UMD не содержит иконки, заменены заглушкой:",
+                  missing.join(", ")
+                );
+              }
+              console.info("[bootstrap] lucide-react загружен, иконок в импорте:", iconNames.length,
+                           "/ заменено заглушками:", missing.length);
+
+              // ─── Шаг 2: pre-process исходника ──────────────────────────────────────
               var processed = source
                 .replace(
                   /import\s*\{([\s\S]*?)\}\s*from\s*["']react["']\s*;?/g,
