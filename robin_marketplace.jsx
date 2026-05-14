@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
+  ArrowLeft,
   Check,
   X,
   Search,
@@ -25,11 +26,19 @@ import {
   Layers,
   Menu,
   SlidersHorizontal,
+  Settings,
+  Folder,
+  Circle,
+  GitBranch,
+  Save,
+  Disc,
   CheckCircle2,
   Plug,
   Terminal,
   ChevronDown,
   Minus,
+  User2,
+  Building2,
 } from "lucide-react";
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -498,6 +507,20 @@ export default function App() {
   const [sandboxModalOpen, setSandboxModalOpen] = useState(false);
   const [sandboxStep, setSandboxStep] = useState(0);
   const [downloadStatus, setDownloadStatus] = useState("idle"); // idle | processing | success
+
+  // Reset scroll to top whenever active tab changes — мгновенно, без анимации.
+  // Срабатывает на ЛЮБОЙ переключатель вкладок: header-nav, mobile drawer,
+  // footer-links, CTA-кнопки и т.п., потому что все они идут через setActiveTab.
+  useEffect(() => {
+    // 1. Останавливаем любую запущенную smooth-scroll анимацию (на случай если
+    //    CSS-правило html { scroll-behavior: smooth } активно где-то в проекте).
+    const prevBehavior = document.documentElement.style.scrollBehavior;
+    document.documentElement.style.scrollBehavior = "auto";
+    // 2. Мгновенный прыжок в (0, 0).
+    window.scrollTo(0, 0);
+    // 3. Возвращаем предыдущее значение, чтобы не сломать никакой smooth-scroll в других местах.
+    document.documentElement.style.scrollBehavior = prevBehavior;
+  }, [activeTab]);
   const [robinGuideOpen, setRobinGuideOpen] = useState(false);
   const [contactFormOpen, setContactFormOpen] = useState(false);
   const [authorFormSubmitted, setAuthorFormSubmitted] = useState(false);
@@ -509,15 +532,38 @@ export default function App() {
     const style = document.createElement("style");
     style.id = styleId;
     style.innerHTML = `
-      @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
-      .font-display { font-family: 'Instrument Serif', 'Times New Roman', serif; font-weight: 400; letter-spacing: -0.015em; }
-      .font-body { font-family: 'Geist', system-ui, -apple-system, sans-serif; }
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+      /* NO SERIF — entire site uses Inter (modern grotesque) for prose & UI,
+         JetBrains Mono for code-like labels. Tailwind utilities like font-bold,
+         font-semibold etc. work as normal: they only change font-weight, not family. */
       .font-code { font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace; font-feature-settings: "liga" 0; }
-      .grid-bg {
-        background-image:
-          linear-gradient(to right, rgba(15, 23, 42, 0.04) 1px, transparent 1px),
-          linear-gradient(to bottom, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
-        background-size: 56px 56px;
+      /* ───────────────────────────────────────────────────────────────
+         INDIGO ACCENT GRADIENT — used on every emphasised heading word
+         in place of the former red-orange sunset gradient.
+      ─────────────────────────────────────────────────────────────── */
+      .text-accent-gradient {
+        background: linear-gradient(90deg, #7C3AED 0%, #EC4899 50%, #DC2626 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+        display: inline-block;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+      /* ───────────────────────────────────────────────────────────────
+         GRADIENT-STROKED ICONS — Lucide icons that reference the SVG
+         linearGradient (id="robin-accent-grad", injected once at root)
+         instead of a solid stroke color. Override the inline
+         stroke="currentColor" presentation attribute via CSS specificity.
+      ─────────────────────────────────────────────────────────────── */
+      .icon-gradient path,
+      .icon-gradient line,
+      .icon-gradient circle,
+      .icon-gradient polyline,
+      .icon-gradient polygon,
+      .icon-gradient rect {
+        stroke: url(#robin-accent-grad) !important;
       }
       .scroll-fade-in { animation: scrollFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
       @keyframes scrollFadeIn {
@@ -530,7 +576,7 @@ export default function App() {
       .stagger-4 { animation-delay: 0.20s; }
       ::selection { background: #c7d2fe; color: #1e1b4b; }
       html, body { overflow-x: hidden; max-width: 100%; }
-      body { font-family: 'Geist', system-ui, sans-serif; }
+      body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; color: #1A1C2E; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
       img, svg, video { max-width: 100%; height: auto; }
       /* Прерываем очень длинные слова чтобы не вылезали за viewport на мобиле */
       h1, h2, h3, p { overflow-wrap: break-word; word-wrap: break-word; }
@@ -538,6 +584,37 @@ export default function App() {
       @media (max-width: 400px) {
         h1.hero-title { font-size: 1.625rem !important; line-height: 1.15 !important; }
         h1.page-title { font-size: 1.5rem !important; line-height: 1.2 !important; }
+      }
+      /* ─────────────────────────────────────────────────────────────
+         VALUE CARDS GRID — 3 equal columns on desktop, single on mobile.
+         All !important to override any Tailwind cascade conflicts and
+         ensure correct rendering even before JIT processes utilities.
+      ───────────────────────────────────────────────────────────────── */
+      .value-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem !important;
+        align-items: stretch !important;
+      }
+      @media (min-width: 768px) {
+        .value-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        }
+      }
+      /* ─────────────────────────────────────────────────────────────
+         FOOTER 3-COLUMN GRID — guarantees horizontal layout on md+
+         regardless of Tailwind JIT timing on the CDN build.
+      ───────────────────────────────────────────────────────────────── */
+      .footer-cols {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 2.5rem !important;
+      }
+      @media (min-width: 768px) {
+        .footer-cols {
+          grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+          gap: 3rem !important;
+        }
       }
     `;
     document.head.appendChild(style);
@@ -570,11 +647,33 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleNavToRegister = () => {
+    setActiveTab("register");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <div
-      className="font-body min-h-screen text-slate-900 selection:bg-red-200 overflow-x-hidden"
+      className="font-body min-h-screen text-slate-900 selection:bg-indigo-200 overflow-x-hidden"
       style={{ background: "#F9F9F9" }}
     >
+      {/* Global SVG defs for gradient-stroked Lucide icons (.icon-gradient class) */}
+      <svg
+        aria-hidden="true"
+        focusable="false"
+        width="0"
+        height="0"
+        style={{ position: "absolute", width: 0, height: 0 }}
+      >
+        <defs>
+          <linearGradient id="robin-accent-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stopColor="#7C3AED" />
+            <stop offset="50%"  stopColor="#EC4899" />
+            <stop offset="100%" stopColor="#DC2626" />
+          </linearGradient>
+        </defs>
+      </svg>
+
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
 
       <main className="pt-16">
@@ -582,6 +681,7 @@ export default function App() {
           <HomeView
             onCatalog={handleNavToCatalog}
             onSandbox={() => setSandboxModalOpen(true)}
+            onRegister={handleNavToRegister}
           />
         )}
         {activeTab === "catalog" && (
@@ -601,6 +701,9 @@ export default function App() {
             authorFormSubmitted={authorFormSubmitted}
             setAuthorFormSubmitted={setAuthorFormSubmitted}
           />
+        )}
+        {activeTab === "register" && (
+          <RegisterView onBack={() => setActiveTab("home")} />
         )}
       </main>
 
@@ -623,6 +726,7 @@ export default function App() {
           step={sandboxStep}
           setStep={setSandboxStep}
           onClose={() => setSandboxModalOpen(false)}
+          onGoToCatalog={handleNavToCatalog}
         />
       )}
       {contactFormOpen && <ContactFormModal onClose={() => setContactFormOpen(false)} />}
@@ -673,19 +777,39 @@ function Navigation({ activeTab, setActiveTab }) {
 
           {/* Desktop nav — hidden on mobile */}
           <nav className="hidden md:flex items-center gap-1 bg-slate-100/60 rounded-full p-1">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`relative px-5 py-1.5 text-sm font-medium rounded-full transition-all duration-300 ${
-                  activeTab === tab.id
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`relative px-5 py-1.5 text-sm font-medium rounded-full transition-all duration-300 ${
+                    isActive
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  {tab.label}
+                  {/* Heartbeat — fires only for active tab.
+                      Brand red #EF3747 (matches the logo). */}
+                  {isActive && (
+                    <span
+                      aria-hidden
+                      className="absolute top-1 right-1.5 flex h-1.5 w-1.5"
+                    >
+                      <span
+                        className="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping"
+                        style={{ backgroundColor: "#EF3747" }}
+                      />
+                      <span
+                        className="relative inline-flex rounded-full h-1.5 w-1.5"
+                        style={{ backgroundColor: "#EF3747" }}
+                      />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </nav>
 
           {/* Right cluster: login (desktop), CTA, burger (mobile) */}
@@ -693,7 +817,7 @@ function Navigation({ activeTab, setActiveTab }) {
             <button className="hidden sm:block text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors duration-300">
               Войти
             </button>
-            <PrimaryButton size="sm" onClick={() => goTo("contacts")}>
+            <PrimaryButton size="sm" onClick={() => goTo("register")}>
               <span className="hidden sm:inline">Запросить доступ</span>
               <span className="sm:hidden">Доступ</span>
             </PrimaryButton>
@@ -789,208 +913,624 @@ function MobileDrawer({ open, onClose, tabs, activeTab, onSelect }) {
 // HOME VIEW
 // ───────────────────────────────────────────────────────────────────────────
 
-function HomeView({ onCatalog, onSandbox }) {
+function HomeView({ onCatalog, onSandbox, onRegister }) {
   return (
     <>
-      <HeroSection onCatalog={onCatalog} onSandbox={onSandbox} />
-      <BusinessValueSection />
+      <HeroSection onCatalog={onCatalog} onSandbox={onSandbox} onRegister={onRegister} />
       <PlatformsSection />
+      <BusinessValueSection />
       <MetricsBand />
-      <CtaFooterBlock onSandbox={onSandbox} onCatalog={onCatalog} />
+      <CtaFooterBlock onSandbox={onSandbox} onCatalog={onCatalog} onRegister={onRegister} />
     </>
   );
 }
 
-function HeroSection({ onCatalog, onSandbox }) {
+// ─── Rotating phrase for hero h1 ────────────────────────────────────────────
+// Static "Автоматизация для" stays, the red bold phrase rotates every 2.8s
+// with a smooth slide-up + fade. Container width is sized to the longest phrase
+// to prevent CLS — invisible "ghost" copies hold the box at max width/height.
+const ROTATING_PHRASES = [
+  { text: "проверки договоров",      tag: "Юристы" },
+  { text: "сверки актов",            tag: "Бухгалтерия" },
+  { text: "поиска по базе знаний",   tag: "IT / Service Desk" },
+  { text: "заполнения отчётов в 1С", tag: "Финансы" },
+  { text: "оформления отпусков",     tag: "HR" },
+  { text: "обработки обращений",     tag: "Клиентский сервис" },
+];
+
+function RotatingPhrase() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setIndex((i) => (i + 1) % ROTATING_PHRASES.length);
+    }, 2800);
+    return () => clearInterval(id);
+  }, []);
+
+  // inline-grid: все 6 фраз отрисованы в одной grid-ячейке (1/1/2/2).
+  // Контейнер автоматически принимает размер самой длинной/высокой фразы.
+  // Между фразами переключается ТОЛЬКО opacity — никаких transform,
+  // никакого position:absolute, никаких размерных изменений.
+  return (
+    <span
+      style={{
+        display: "inline-grid",
+        verticalAlign: "baseline",
+      }}
+    >
+      {ROTATING_PHRASES.map((phrase, i) => (
+        <span
+          key={i}
+          aria-hidden={i !== index}
+          style={{
+            // Layout & animation
+            gridArea: "1 / 1 / 2 / 2",
+            opacity: i === index ? 1 : 0,
+            transition: "opacity 500ms ease-out",
+            pointerEvents: i === index ? "auto" : "none",
+            whiteSpace: "nowrap",
+            // Typography — explicit weight + display for reliable gradient rendering
+            fontWeight: 800,
+            display: "inline-block",
+            // Energy-pulse gradient violet → pink → red — visually echoes
+            // the PrimaryButton hover state and creates a sympathetic
+            // connection between the rotating headline word and the CTA.
+            background: "linear-gradient(90deg, #7C3AED 0%, #EC4899 50%, #DC2626 100%)",
+            WebkitBackgroundClip: "text",
+            backgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            color: "transparent",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          {phrase.text}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function HeroSection({ onCatalog, onSandbox, onRegister }) {
   return (
     <section className="relative overflow-hidden border-b border-slate-200/60">
-      <div className="absolute inset-0 grid-bg pointer-events-none" />
       <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-red-100/40 via-transparent to-orange-100/30 blur-3xl pointer-events-none"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-indigo-100/40 via-transparent to-violet-100/30 blur-3xl pointer-events-none"
         style={{ width: "min(1000px, 100%)", height: 600, maxWidth: "100vw" }}
       />
 
       <div className="relative max-w-7xl mx-auto px-4 md:px-6 lg:px-8 pt-16 md:pt-24 pb-20 md:pb-32">
-        <div className="grid lg:grid-cols-2 gap-10 md:gap-12 lg:gap-16 items-center">
-          {/* LEFT: Copy + CTAs */}
-          <div className="scroll-fade-in">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-6 md:mb-8 rounded-full border border-slate-200 bg-white/60 backdrop-blur">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 animate-ping" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-600" />
-              </span>
-              <span className="text-xs font-mono font-medium tracking-wider uppercase text-slate-700">
-                ИИ-активы для бизнеса
-              </span>
-            </div>
-
-            <h1 className="hero-title text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl leading-tight tracking-tight text-slate-900 mb-5 md:mb-7">
-              Маркетплейс <span className="font-display italic text-red-700">ИИ-агентов</span>{" "}
-              для корпоративного сектора
-            </h1>
-
-            <p className="text-base md:text-lg text-slate-600 leading-relaxed max-w-xl mb-8 md:mb-10">
-              Маркетплейс готовых ИИ-агентов и RPA-сценариев для ИТ-команд.
-              Сократите разработку в 5 раз благодаря преднастроенной
-              инфраструктуре и встроенному доступу к LLM
-            </p>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <PrimaryButton onClick={onCatalog} icon={<ArrowRight className="w-4 h-4" />}>
-                Смотреть каталог
-              </PrimaryButton>
-              <SandboxButton onClick={onSandbox}>Попробовать в Sandbox</SandboxButton>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-8 md:mt-10 text-xs text-slate-500">
-              <div className="flex items-center gap-1.5">
-                <Check className="w-3.5 h-3.5 text-emerald-500" strokeWidth={2.5} />
-                Без регистрации в Sandbox
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Check className="w-3.5 h-3.5 text-emerald-500" strokeWidth={2.5} />
-                14 дней корпоративного триала
-              </div>
-            </div>
+        {/* TEXT BLOCK — all centered on a single vertical axis */}
+        <div className="text-center max-w-3xl mx-auto scroll-fade-in">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-6 md:mb-8 rounded-full border border-slate-200 bg-white/60 backdrop-blur">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-indigo-500 opacity-75 animate-ping" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-600" />
+            </span>
+            <span className="text-xs font-mono font-medium tracking-wider uppercase text-slate-700">
+              Российская RPA-платформа корпоративного уровня
+            </span>
           </div>
 
-          {/* RIGHT: Code editor */}
-          <div className="scroll-fade-in stagger-2">
-            <CodeEditor />
+          <h1 className="hero-title text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl leading-tight tracking-tight text-slate-900 mb-5 md:mb-7">
+            Автоматизация для
+            <br />
+            <RotatingPhrase />
+          </h1>
+
+          <p className="text-base md:text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto mb-8 md:mb-10">
+            Готовые No-code решения для автоматизации бизнес-процессов на базе
+            ROBIN — российской платформы из реестра отечественного ПО.
+            Полноценное использование — после авторизации в платформе
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <PrimaryButton onClick={onRegister} icon={<ArrowRight className="w-4 h-4" />}>
+              Запросить доступ
+            </PrimaryButton>
+            <SandboxButton onClick={onCatalog}>Смотреть каталог</SandboxButton>
           </div>
+
+          {/* "How it works" link — opens 4-step sandbox modal */}
+          <div className="flex justify-center mt-5 md:mt-6">
+            <button
+              type="button"
+              onClick={onSandbox}
+              className="group inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors duration-200"
+            >
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-slate-300 group-hover:border-indigo-500 group-hover:bg-indigo-50 transition-colors duration-200">
+                <Play
+                  className="w-3 h-3 text-slate-500 group-hover:text-indigo-600 transition-colors duration-200"
+                  strokeWidth={2.5}
+                  fill="currentColor"
+                />
+              </span>
+              <span className="group-hover:underline underline-offset-4 decoration-indigo-500/60">
+                Как это работает
+              </span>
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-8 md:mt-10 text-xs text-slate-500">
+            <div className="inline-flex items-center gap-1.5">
+              <Check className="w-3.5 h-3.5 text-emerald-500" strokeWidth={2.5} />
+              В реестре отечественного ПО
+            </div>
+            <div className="inline-flex items-center gap-1.5">
+              <Check className="w-3.5 h-3.5 text-emerald-500" strokeWidth={2.5} />
+              Соответствие 152-ФЗ
+            </div>
+          </div>
+        </div>
+
+        {/* STUDIO BLOCK — wide illustration centered below text */}
+        <div className="mt-16 md:mt-20 max-w-6xl mx-auto scroll-fade-in stagger-2">
+
+          <CodeEditor />
         </div>
       </div>
     </section>
   );
 }
 
+// ─── ROBIN Studio scenarios ────────────────────────────────────────────────
+// Data-driven scenarios for the interactive Studio mockup. Clicking a sidebar
+// item swaps the entire process chain + properties panel via opacity fade.
+// Все 4 сценария соответствуют реальным бизнес-кейсам платформы ROBIN.
+
+const STUDIO_SCENARIOS = {
+  "ai-agents": {
+    label: "ИИ-агенты",
+    processName: "Проверка договора",
+    defaultNode: "ai-agent",
+    nodes: [
+      { kind: "node",      id: "start",     tone: "slate", iconKey: "Play",         title: "Начало",                  sub: "Триггер: новый договор" },
+      { kind: "node",      id: "mcp",       tone: "sky",   iconKey: "Plug",         title: "MCP: импорт из 1С",       sub: "1С:ERP · договор.pdf" },
+      { kind: "node",      id: "ai-agent",  tone: "amber", iconKey: "Cpu",          title: "ИИ-агент: Юрист",         sub: "Анализ рисков · LLM" },
+      { kind: "condition", id: "condition", title: "Условие",                       sub: "Результат проверки" },
+      { kind: "branch",
+        left:  { id: "branch-green", label: "Нарушений нет",    tone: "emerald", iconKey: "CheckCircle2", title: "Загрузка в 1С",         sub: "Архив · /done" },
+        right: { id: "branch-red",   label: "Требует внимания", tone: "rose",    iconKey: "Mail",         title: "Уведомить сотрудника",  sub: "Юр. отдел" } },
+    ],
+    properties: {
+      start:          { title: "Начало",        fields: [ { label: "Триггер",   value: "Новый договор" }, { label: "Источник", value: "1С:ERP" } ] },
+      mcp:            { title: "MCP-коннектор", fields: [ { label: "Источник",  value: "1С:ERP" }, { label: "Папка", value: "/docs" }, { label: "Формат", value: "PDF" } ] },
+      "ai-agent":     { title: "ИИ-агент",      fields: [ { label: "Модель",    value: "LLM-1", kind: "pill-amber" }, { label: "Точность", value: 0.98, kind: "progress" }, { label: "Источник", value: "1С:ERP" } ] },
+      condition:      { title: "Условие",       fields: [ { label: "Логика",    value: "Результат проверки" }, { label: "Ветви", value: "2" } ] },
+      "branch-green": { title: "Загрузка в 1С", fields: [ { label: "Действие",  value: "Архив" }, { label: "Папка", value: "/done" } ] },
+      "branch-red":   { title: "Уведомить",     fields: [ { label: "Получатель", value: "Юр. отдел" }, { label: "Канал", value: "Email" } ] },
+    },
+  },
+  "rpa-1c": {
+    label: "1С",
+    processName: "Выгрузка банковских выписок",
+    defaultNode: "rpa-data",
+    nodes: [
+      { kind: "node",      id: "start",     tone: "slate", iconKey: "Play",     title: "Начало",                  sub: "Расписание · ежедневно" },
+      { kind: "node",      id: "rpa-auth",  tone: "sky",   iconKey: "Lock",     title: "RPA: Авторизация 1С",     sub: "Сертификат · логин" },
+      { kind: "node",      id: "rpa-data",  tone: "amber", iconKey: "Download", title: "RPA: Получение данных",   sub: "Выписки за период" },
+      { kind: "condition", id: "condition", title: "Условие",                   sub: "Данные полные?" },
+      { kind: "branch",
+        left:  { id: "branch-green", label: "Полные",   tone: "emerald", iconKey: "CheckCircle2", title: "Сохранить в архив",    sub: "Архив 1С" },
+        right: { id: "branch-red",   label: "Неполные", tone: "rose",    iconKey: "Mail",         title: "Запросить уточнение",  sub: "Финансовый отдел" } },
+    ],
+    properties: {
+      start:          { title: "Начало",        fields: [ { label: "Расписание", value: "Ежедневно 09:00" }, { label: "Источник", value: "Планировщик" } ] },
+      "rpa-auth":     { title: "Авторизация",   fields: [ { label: "Метод",      value: "Сертификат" }, { label: "Система", value: "1С:Бухгалтерия" } ] },
+      "rpa-data":     { title: "Получение данных", fields: [ { label: "Период",  value: "За текущий день" }, { label: "Тип", value: "Банковские выписки" }, { label: "Точность", value: 0.97, kind: "progress" } ] },
+      condition:      { title: "Условие",       fields: [ { label: "Проверка",  value: "Полнота данных" }, { label: "Ветви", value: "2" } ] },
+      "branch-green": { title: "Сохранение",    fields: [ { label: "Действие",  value: "Архив" }, { label: "Папка", value: "/banks/2026" } ] },
+      "branch-red":   { title: "Уведомление",   fields: [ { label: "Получатель", value: "Фин. отдел" }, { label: "Канал", value: "Email" } ] },
+    },
+  },
+  "browsers": {
+    label: "Браузеры",
+    processName: "Интеллектуальный поиск цен",
+    defaultNode: "ai-analyze",
+    nodes: [
+      { kind: "node", id: "start",       tone: "slate",   iconKey: "Play",     title: "Начало",                       sub: "Триггер: запуск по расписанию" },
+      { kind: "node", id: "mcp-browser", tone: "sky",     iconKey: "Search",   title: "MCP: Поиск в браузере",        sub: "Маркетплейсы · API" },
+      { kind: "node", id: "ai-analyze",  tone: "amber",   iconKey: "Cpu",      title: "ИИ-агент: Анализ конкурентов", sub: "LLM · сравнение цен" },
+      { kind: "node", id: "save",        tone: "emerald", iconKey: "FileText", title: "Сохранить в Excel",            sub: "Отчёт по продуктам" },
+    ],
+    properties: {
+      start:         { title: "Начало",      fields: [ { label: "Расписание", value: "Ежедневно 08:00" }, { label: "Источник", value: "Планировщик" } ] },
+      "mcp-browser": { title: "Поиск",       fields: [ { label: "Источник",   value: "Браузер" }, { label: "Цели", value: "Маркетплейсы" } ] },
+      "ai-analyze":  { title: "ИИ-агент",    fields: [ { label: "Модель",     value: "LLM-1", kind: "pill-amber" }, { label: "Точность", value: 0.95, kind: "progress" }, { label: "Задача", value: "Сравнение цен" } ] },
+      save:          { title: "Сохранение",  fields: [ { label: "Формат",     value: "Excel" }, { label: "Папка", value: "/reports" } ] },
+    },
+  },
+  "integrations": {
+    label: "Интеграции",
+    processName: "Сверка актов через Диадок",
+    defaultNode: "ai-recon",
+    nodes: [
+      { kind: "node",      id: "start",      tone: "slate", iconKey: "Play", title: "Начало",                sub: "Триггер: новый акт" },
+      { kind: "node",      id: "mcp-diadoc", tone: "sky",   iconKey: "Plug", title: "MCP: Коннектор Диадок", sub: "СКБ Контур · документы" },
+      { kind: "node",      id: "ai-recon",   tone: "amber", iconKey: "Cpu",  title: "ИИ-агент: Сверка сумм", sub: "LLM · сравнение" },
+      { kind: "condition", id: "condition",  title: "Условие",               sub: "Совпадает?" },
+      { kind: "branch",
+        left:  { id: "branch-green", label: "Совпадает",   tone: "emerald", iconKey: "CheckCircle2", title: "Подписать акт", sub: "ЭП · авто" },
+        right: { id: "branch-red",   label: "Расхождение", tone: "rose",    iconKey: "Mail",         title: "Отклонить",     sub: "Уведомить отправителя" } },
+    ],
+    properties: {
+      start:          { title: "Начало",          fields: [ { label: "Триггер", value: "Новый акт" }, { label: "Источник", value: "Диадок" } ] },
+      "mcp-diadoc":   { title: "Коннектор Диадок", fields: [ { label: "Сервис", value: "СКБ Контур" }, { label: "Тип", value: "Документы" } ] },
+      "ai-recon":     { title: "ИИ-агент",        fields: [ { label: "Модель", value: "LLM-1", kind: "pill-amber" }, { label: "Точность", value: 0.99, kind: "progress" }, { label: "Задача", value: "Сверка сумм" } ] },
+      condition:      { title: "Условие",         fields: [ { label: "Проверка", value: "Совпадение сумм" }, { label: "Ветви", value: "2" } ] },
+      "branch-green": { title: "Подписание",      fields: [ { label: "Действие", value: "Электронная подпись" }, { label: "Режим", value: "Авто" } ] },
+      "branch-red":   { title: "Отклонение",      fields: [ { label: "Получатель", value: "Отправитель" }, { label: "Канал", value: "Email" } ] },
+    },
+  },
+};
+
+const STUDIO_SCENARIO_IDS = ["rpa-1c", "browsers", "ai-agents", "integrations"];
+
+// Map iconKey string → component (Lucide icons already imported above)
+const STUDIO_ICONS = {
+  Play, Plug, Cpu, GitBranch, CheckCircle2, Mail, Download, Search,
+  FileText, Lock, Folder, Settings,
+};
+
 function CodeEditor() {
-  return (
-    <div className="relative">
-      {/* Glow */}
-      <div className="absolute -inset-2 bg-gradient-to-tr from-red-600/15 via-transparent to-orange-500/15 blur-2xl" />
+  // Активный сценарий + блок, на который наведён курсор (или null = default)
+  const [activeScenario, setActiveScenario] = useState("ai-agents");
+  const [hoveredNode, setHoveredNode] = useState(null);
+  const scenario = STUDIO_SCENARIOS[activeScenario];
+  const currentNodeId = hoveredNode || scenario.defaultNode;
+  const props =
+    scenario.properties[currentNodeId] ||
+    scenario.properties[scenario.defaultNode];
 
-      <div className="relative rounded-xl bg-slate-950 border border-slate-800/80 overflow-hidden shadow-2xl shadow-slate-900/20">
-        {/* Editor chrome */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-800/80 bg-slate-900/50">
-          <div className="flex gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
-            <div className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
-            <div className="w-2.5 h-2.5 rounded-full bg-green-400/80" />
+  const handleScenarioChange = (id) => {
+    setActiveScenario(id);
+    setHoveredNode(null);
+  };
+
+  const TONES = {
+    slate:   { bg: "bg-slate-50",   border: "border-slate-300", iconBg: "bg-white",       iconColor: "text-slate-700"   },
+    sky:     { bg: "bg-sky-50",     border: "border-sky-200",   iconBg: "bg-sky-100",     iconColor: "text-sky-700"     },
+    amber:   { bg: "bg-amber-50",   border: "border-amber-200", iconBg: "bg-amber-100",   iconColor: "text-amber-700"   },
+    emerald: { bg: "bg-emerald-50", border: "border-emerald-200", iconBg: "bg-emerald-100", iconColor: "text-emerald-700" },
+    rose:    { bg: "bg-orange-50",  border: "border-orange-200", iconBg: "bg-orange-100", iconColor: "text-orange-600"  },
+  };
+
+  const ActionNode = ({ id, tone, icon: Icon, title, sub }) => {
+    const t = TONES[tone];
+    return (
+      <div
+        onMouseEnter={() => setHoveredNode(id)}
+        className={`relative w-full max-w-md mx-auto rounded-2xl border ${t.bg} ${t.border} transition-all duration-300 ease-out hover:shadow-md hover:border-slate-400 cursor-default`}
+      >
+        <div className="flex items-center gap-3 px-3.5 py-2.5">
+          <div className={`w-8 h-8 rounded-xl ${t.iconBg} flex items-center justify-center flex-shrink-0`}>
+            <Icon className={`w-4 h-4 ${t.iconColor}`} strokeWidth={2.25} />
           </div>
-          <div className="flex-1 flex justify-center">
-            <div className="font-code text-xs text-slate-500 px-3 py-1 rounded-md bg-slate-800/60 border border-slate-700/50">
-              connector.ts
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold leading-tight text-slate-900" style={{ fontSize: 13 }}>
+              {title}
             </div>
+            {sub && (
+              <div className="text-slate-500 leading-tight truncate" style={{ fontSize: 11 }}>
+                {sub}
+              </div>
+            )}
           </div>
-          <div className="w-10" />
-        </div>
-
-        {/* Code content */}
-        <div className="p-5 font-code text-xs leading-relaxed overflow-x-auto">
-          <CodeLine n={1}>
-            <span className="text-pink-400">import</span>{" "}
-            <span className="text-slate-300">{"{ MCPConnector }"}</span>{" "}
-            <span className="text-pink-400">from</span>{" "}
-            <span className="text-emerald-300">"@robin/core"</span>
-            <span className="text-slate-500">;</span>
-          </CodeLine>
-          <CodeLine n={2}>
-            <span className="text-pink-400">import</span>{" "}
-            <span className="text-slate-300">{"{ ContractCheckAgent }"}</span>{" "}
-            <span className="text-pink-400">from</span>{" "}
-            <span className="text-emerald-300">"@robin/agents"</span>
-            <span className="text-slate-500">;</span>
-          </CodeLine>
-          <CodeLine n={3}> </CodeLine>
-          <CodeLine n={4}>
-            <span className="text-slate-500">
-              {"// Один коннектор — десятки источников: 1С, Excel, браузеры"}
-            </span>
-          </CodeLine>
-          <CodeLine n={5}>
-            <span className="text-orange-400">const</span>{" "}
-            <span className="text-sky-300">mcp</span>{" "}
-            <span className="text-slate-400">=</span>{" "}
-            <span className="text-orange-400">new</span>{" "}
-            <span className="text-yellow-300">MCPConnector</span>
-            <span className="text-slate-300">{"({"}</span>
-          </CodeLine>
-          <CodeLine n={6}>
-            {"  "}
-            <span className="text-sky-300">sources</span>
-            <span className="text-slate-300">:</span>{" "}
-            <span className="text-slate-300">[</span>
-            <span className="text-emerald-300">"1c:erp"</span>
-            <span className="text-slate-300">,</span>{" "}
-            <span className="text-emerald-300">"excel"</span>
-            <span className="text-slate-300">,</span>{" "}
-            <span className="text-emerald-300">"browser"</span>
-            <span className="text-slate-300">],</span>
-          </CodeLine>
-          <CodeLine n={7}>
-            {"  "}
-            <span className="text-sky-300">sandbox</span>
-            <span className="text-slate-300">:</span>{" "}
-            <span className="text-orange-300">true</span>
-            <span className="text-slate-300">,</span>{" "}
-            <span className="text-slate-500">{"// изолированная среда"}</span>
-          </CodeLine>
-          <CodeLine n={8}>
-            <span className="text-slate-300">{"});"}</span>
-          </CodeLine>
-          <CodeLine n={9}> </CodeLine>
-          <CodeLine n={10}>
-            <span className="text-orange-400">const</span>{" "}
-            <span className="text-sky-300">agent</span>{" "}
-            <span className="text-slate-400">=</span>{" "}
-            <span className="text-orange-400">new</span>{" "}
-            <span className="text-yellow-300">ContractCheckAgent</span>
-            <span className="text-slate-300">{"({ "}</span>
-            <span className="text-sky-300">connector</span>
-            <span className="text-slate-300">: mcp </span>
-            <span className="text-slate-300">{"});"}</span>
-          </CodeLine>
-          <CodeLine n={11}> </CodeLine>
-          <CodeLine n={12}>
-            <span className="text-pink-400">await</span>{" "}
-            <span className="text-sky-300">agent</span>
-            <span className="text-slate-300">.</span>
-            <span className="text-yellow-300">run</span>
-            <span className="text-slate-300">{"({ "}</span>
-            <span className="text-sky-300">document</span>
-            <span className="text-slate-300">:</span>{" "}
-            <span className="text-emerald-300">"./contract.pdf"</span>{" "}
-            <span className="text-slate-300">{"});"}</span>
-          </CodeLine>
-          <CodeLine n={13}>
-            <span className="text-slate-500">
-              {"//  ✓ Модель развёрнут за 4 минуты вместо 4 недель"}
-            </span>
-          </CodeLine>
-        </div>
-
-        {/* Status bar */}
-        <div className="flex items-center justify-between px-4 py-2 border-t border-slate-800/80 bg-slate-900/40 font-code text-xs text-slate-500">
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              MCP подключён
-            </span>
-            <span>TypeScript</span>
-          </div>
-          <span>UTF-8 · LF</span>
+          <Settings className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" strokeWidth={2} />
         </div>
       </div>
+    );
+  };
+
+  const VConnector = ({ height = 20 }) => (
+    <div className="flex justify-center" style={{ height }}>
+      <div className="w-px h-full bg-slate-300" />
     </div>
   );
-}
 
-function CodeLine({ n, children }) {
+  // SplitConnector: те же 1px серые линии, что и VConnector.
+  // Реализован через абсолютно позиционированные div'ы вместо SVG,
+  // чтобы избежать масштабирования stroke при non-uniform scaling.
+  const SplitConnector = () => (
+    <div className="relative w-full" style={{ height: 36 }}>
+      {/* Верхний вертикальный сегмент (от Условие вниз до точки разделения) */}
+      <div
+        className="absolute bg-slate-300"
+        style={{ left: "50%", top: 0, width: 1, height: 16, transform: "translateX(-50%)" }}
+      />
+      {/* Горизонтальная перемычка */}
+      <div
+        className="absolute bg-slate-300"
+        style={{ left: "15%", right: "15%", top: 16, height: 1 }}
+      />
+      {/* Левая вертикальная ветка */}
+      <div
+        className="absolute bg-slate-300"
+        style={{ left: "15%", top: 16, width: 1, height: 20 }}
+      />
+      {/* Правая вертикальная ветка */}
+      <div
+        className="absolute bg-slate-300"
+        style={{ right: "15%", top: 16, width: 1, height: 20 }}
+      />
+    </div>
+  );
+
+  // Render одного узла из массива nodes сценария
+  const renderNode = (node, i) => {
+    if (node.kind === "node") {
+      const Icon = STUDIO_ICONS[node.iconKey] || Play;
+      return (
+        <ActionNode
+          key={node.id}
+          id={node.id}
+          tone={node.tone}
+          icon={Icon}
+          title={node.title}
+          sub={node.sub}
+        />
+      );
+    }
+    if (node.kind === "condition") {
+      return (
+        <div
+          key={node.id}
+          onMouseEnter={() => setHoveredNode(node.id)}
+          className="rounded-2xl border border-slate-300 bg-white px-3.5 py-2.5 flex items-center gap-3 max-w-md mx-auto transition-all duration-300 ease-out hover:shadow-md hover:border-slate-400 cursor-default"
+        >
+          <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+            <GitBranch className="w-4 h-4 text-slate-700" strokeWidth={2.25} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold leading-tight text-slate-900" style={{ fontSize: 13 }}>
+              {node.title}
+            </div>
+            <div className="text-slate-500 leading-tight" style={{ fontSize: 11 }}>
+              {node.sub}
+            </div>
+          </div>
+          <Settings className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" strokeWidth={2} />
+        </div>
+      );
+    }
+    if (node.kind === "branch") {
+      const renderBranch = (b) => {
+        const Icon = STUDIO_ICONS[b.iconKey] || CheckCircle2;
+        return (
+          <div className="flex flex-col items-stretch">
+            <span
+              className="self-center mb-2 px-2.5 py-0.5 rounded-full font-mono font-medium uppercase tracking-wider border bg-slate-50 text-slate-600 border-slate-200"
+              style={{ fontSize: 10 }}
+            >
+              {b.label}
+            </span>
+            <ActionNode
+              id={b.id}
+              tone={b.tone}
+              icon={Icon}
+              title={b.title}
+              sub={b.sub}
+            />
+          </div>
+        );
+      };
+      return (
+        <div key="branch" className="grid grid-cols-2 gap-2">
+          {renderBranch(node.left)}
+          {renderBranch(node.right)}
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
-    <div className="flex">
-      <span className="select-none w-8 text-right pr-4 text-slate-600">{n}</span>
-      <span className="flex-1">{children}</span>
+    <div className="relative">
+      <style>{`
+        @keyframes fadeProps {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes fadeCanvas {
+          from { opacity: 0; transform: translateY(2px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
+      {/* Soft glow behind window */}
+      <div className="absolute -inset-2 bg-gradient-to-tr from-red-600/15 via-transparent to-orange-500/15 blur-2xl pointer-events-none" />
+
+      <div className="relative rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-2xl shadow-slate-900/15">
+        {/* ─── Window header ──────────────────────────────────────────── */}
+        <div className="flex items-center gap-1.5 px-3 h-10 border-b border-slate-200 bg-slate-50">
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-emerald-500 bg-transparent text-emerald-600 text-xs font-semibold hover:bg-emerald-500 hover:text-white transition-colors duration-200"
+            onClick={(e) => e.preventDefault()}
+            aria-label="Запустить"
+          >
+            <Play className="w-3 h-3" strokeWidth={2.5} fill="currentColor" />
+            Запустить
+          </button>
+          <button
+            type="button"
+            className="w-7 h-7 rounded-full hover:bg-slate-200 flex items-center justify-center transition-colors"
+            onClick={(e) => e.preventDefault()}
+            aria-label="Запись"
+          >
+            <Disc className="w-3.5 h-3.5 text-rose-500" strokeWidth={2} />
+          </button>
+          <button
+            type="button"
+            className="w-7 h-7 rounded-full hover:bg-slate-200 flex items-center justify-center transition-colors"
+            onClick={(e) => e.preventDefault()}
+            aria-label="Сохранить"
+          >
+            <Save className="w-3.5 h-3.5 text-slate-600" strokeWidth={2} />
+          </button>
+          {/* Process name — обновляется по сценарию через key + fadeProps */}
+          <div className="flex-1 flex justify-center">
+            <div
+              key={activeScenario + "-name"}
+              style={{ animation: "fadeProps 240ms ease-out both" }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-slate-200"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="text-xs font-medium text-slate-700">
+                {scenario.processName}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="w-7 h-7 rounded-full hover:bg-slate-200 flex items-center justify-center transition-colors"
+            onClick={(e) => e.preventDefault()}
+            aria-label="Настройки"
+          >
+            <Settings className="w-3.5 h-3.5 text-slate-500" strokeWidth={2} />
+          </button>
+        </div>
+
+        {/* ─── Studio body ─────────────────────────────────────────────── */}
+        <div className="flex bg-slate-100" style={{ minHeight: 520 }}>
+          {/* Actions panel — теперь интерактивная */}
+          <aside className="w-48 flex-shrink-0 bg-white border-r border-slate-200 py-3">
+            <div
+              className="text-slate-400 font-mono font-medium uppercase tracking-widest px-3 mb-2"
+              style={{ fontSize: 10 }}
+            >
+              Действия
+            </div>
+            <ul className="space-y-0.5">
+              {STUDIO_SCENARIO_IDS.map((id) => {
+                const s = STUDIO_SCENARIOS[id];
+                const active = activeScenario === id;
+                return (
+                  <li key={id}>
+                    <button
+                      type="button"
+                      onClick={() => handleScenarioChange(id)}
+                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors ${
+                        active
+                          ? "bg-slate-100 text-slate-900 font-semibold"
+                          : "text-slate-600 hover:bg-slate-50 font-medium"
+                      }`}
+                    >
+                      <Folder
+                        className={`w-3.5 h-3.5 flex-shrink-0 ${
+                          active ? "text-amber-500" : "text-slate-400"
+                        }`}
+                        strokeWidth={2}
+                      />
+                      <span className="truncate" style={{ fontSize: 12 }}>
+                        {s.label}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </aside>
+
+          {/* Canvas — keyed by scenario, fades on swap */}
+          <main className="flex-1 min-w-0 p-5 relative">
+            <div
+              className="absolute inset-0 opacity-50 pointer-events-none"
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle, rgba(15,23,42,0.08) 1px, transparent 1px)",
+                backgroundSize: "14px 14px",
+              }}
+            />
+            <div
+              key={activeScenario}
+              style={{ animation: "fadeCanvas 280ms ease-out both" }}
+              className="relative"
+            >
+              {scenario.nodes.map((node, i) => {
+                const isBranch = node.kind === "branch";
+                return (
+                  <Fragment key={node.id || `branch-${i}`}>
+                    {i > 0 && (isBranch ? <SplitConnector /> : <VConnector />)}
+                    {renderNode(node, i)}
+                  </Fragment>
+                );
+              })}
+            </div>
+          </main>
+
+          {/* Properties — keyed by scenario+node, plays fadeProps on update */}
+          <aside className="w-56 flex-shrink-0 bg-white border-l border-slate-200 py-3 px-3">
+            <div
+              className="text-slate-400 font-mono font-medium uppercase tracking-widest mb-3"
+              style={{ fontSize: 10 }}
+            >
+              Свойства
+            </div>
+            <div
+              key={activeScenario + "-" + currentNodeId}
+              style={{ animation: "fadeProps 240ms ease-out both" }}
+              className="space-y-3"
+            >
+              <div>
+                <div className="text-slate-500 mb-0.5" style={{ fontSize: 10 }}>Блок</div>
+                <div className="font-semibold text-slate-900 truncate" style={{ fontSize: 12 }}>
+                  {props.title}
+                </div>
+              </div>
+              {props.fields.map((f, i) => (
+                <div key={i} className="pt-2 border-t border-slate-100">
+                  <div className="text-slate-500 mb-1" style={{ fontSize: 10 }}>{f.label}</div>
+                  {f.kind === "pill-amber" && (
+                    <div
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 font-mono"
+                      style={{ fontSize: 11 }}
+                    >
+                      <Cpu className="w-3 h-3" strokeWidth={2} />
+                      {f.value}
+                    </div>
+                  )}
+                  {f.kind === "progress" && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-emerald-500"
+                          style={{ width: `${Math.round(f.value * 100)}%` }}
+                        />
+                      </div>
+                      <span
+                        className="font-mono font-semibold text-slate-900"
+                        style={{ fontSize: 11 }}
+                      >
+                        {f.value}
+                      </span>
+                    </div>
+                  )}
+                  {!f.kind && (
+                    <div className="text-slate-700 font-medium truncate" style={{ fontSize: 12 }}>
+                      {f.value}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </aside>
+        </div>
+
+        {/* ─── Bottom strip ─────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between px-4 h-10 border-t border-slate-200 bg-slate-50">
+          <span className="inline-flex items-center gap-1.5 text-slate-500 text-xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            Процесс готов
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 text-white">
+            <Zap className="w-3.5 h-3.5 text-amber-300" strokeWidth={2.5} />
+            <span className="font-mono font-semibold tracking-tight text-xs">
+              0 строк кода · Собрано в ROBIN Studio
+            </span>
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1019,21 +1559,20 @@ function BusinessValueSection() {
       />
 
       <div className="relative max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-24 lg:py-32">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 mb-12">
-          <div>
-            <SectionLabel>Зачем вам это</SectionLabel>
-            <h2 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl tracking-tight text-slate-900 leading-tight">
-              Не сервис, а{" "}
-              <span className="font-display italic text-red-700">инструмент</span>
-            </h2>
-          </div>
-          <p className="text-lg text-slate-600 leading-relaxed self-end">
+        {/* Centered header above the grid */}
+        <div className="text-center max-w-2xl mx-auto mb-12 md:mb-16">
+          <SectionLabel>Зачем вам это</SectionLabel>
+          <h2 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl tracking-tight text-slate-900 leading-tight mb-4">
+            Не сервис, а{" "}
+            <span className="font-extrabold text-slate-900">инструмент</span>
+          </h2>
+          <p className="text-base md:text-lg text-slate-600 leading-relaxed">
             Настраиваемый ИИ-агент для развертывания в собственном контуре.
             Полная конфиденциальность данных и гибкая доработка логики
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5">
+        <div className="value-grid">
           <IndustryCard
             theme="amber"
             icon={Lock}
@@ -1063,28 +1602,28 @@ function BusinessValueSection() {
 
 const CARD_THEMES = {
   amber: {
-    bg: "bg-amber-200/40",
-    border: "border-amber-200/60",
+    bg: "bg-amber-100/60",
+    border: "border-amber-200/50",
     iconBg: "bg-amber-500",
     title: "text-amber-900",
-    desc: "text-amber-900/85",
-    blob: "bg-amber-300/40",
+    desc: "text-amber-900/80",
+    blob: "bg-amber-200/40",
   },
   rose: {
-    bg: "bg-rose-200/40",
-    border: "border-rose-200/60",
+    bg: "bg-rose-100/60",
+    border: "border-rose-200/50",
     iconBg: "bg-rose-500",
     title: "text-rose-900",
-    desc: "text-rose-900/85",
-    blob: "bg-rose-300/40",
+    desc: "text-rose-900/80",
+    blob: "bg-rose-200/40",
   },
   sky: {
-    bg: "bg-sky-200/40",
-    border: "border-sky-200/60",
+    bg: "bg-sky-100/60",
+    border: "border-sky-200/50",
     iconBg: "bg-sky-600",
     title: "text-sky-900",
-    desc: "text-sky-900/85",
-    blob: "bg-sky-300/40",
+    desc: "text-sky-900/80",
+    blob: "bg-sky-200/40",
   },
 };
 
@@ -1092,8 +1631,7 @@ function IndustryCard({ theme, icon: Icon, title, description, mockup }) {
   const t = CARD_THEMES[theme];
   return (
     <article
-      className={`group relative ${t.bg} backdrop-blur-xl border ${t.border} rounded-2xl p-5 lg:p-6 overflow-hidden flex flex-col transition-all duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/10`}
-      style={{ minHeight: 400 }}
+      className={`group relative ${t.bg} backdrop-blur-xl border ${t.border} rounded-3xl p-5 lg:p-6 overflow-hidden flex flex-col transition-all duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/10 h-full min-w-0`}
     >
       {/* Glass highlight along the top edge */}
       <div
@@ -1107,22 +1645,22 @@ function IndustryCard({ theme, icon: Icon, title, description, mockup }) {
 
       <div className="relative z-10">
         <div
-          className={`w-9 h-9 rounded-lg ${t.iconBg} flex items-center justify-center mb-4 shadow-md shadow-black/10`}
+          className={`w-9 h-9 rounded-xl ${t.iconBg} flex items-center justify-center mb-4 shadow-md shadow-black/10`}
         >
           <Icon className="w-4 h-4 text-white" strokeWidth={2} />
         </div>
         <h3
-          className={`text-lg lg:text-xl ${t.title} font-medium tracking-tight leading-snug mb-2`}
+          className={`text-lg lg:text-xl ${t.title} font-semibold tracking-tight leading-snug mb-2`}
         >
           {title}
         </h3>
-        <p className={`text-sm lg:text-base ${t.desc} leading-relaxed`}>
+        <p className={`text-sm ${t.desc} leading-relaxed`}>
           {description}
         </p>
       </div>
 
       {/* Glassmorphism mockup at bottom */}
-      <div className="relative z-10 mt-auto pt-5">{mockup}</div>
+      <div className="relative z-10 mt-auto pt-4">{mockup}</div>
     </article>
   );
 }
@@ -1131,43 +1669,54 @@ function IndustryCard({ theme, icon: Icon, title, description, mockup }) {
 
 function SandboxMockup() {
   return (
-    <div className="rounded-2xl border border-white/70 bg-white/50 backdrop-blur-md p-3 shadow-sm">
-      <div className="flex items-center gap-2 pb-2 border-b border-amber-200/40">
-        <div className="flex gap-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-red-400/80" />
-          <div className="w-1.5 h-1.5 rounded-full bg-yellow-400/80" />
-          <div className="w-1.5 h-1.5 rounded-full bg-green-400/80" />
-        </div>
-        <div
-          className="font-code text-amber-900/60 ml-1"
-          style={{ fontSize: 10 }}
-        >
-          sandbox · isolated
-        </div>
-        <div
-          className="ml-auto flex items-center gap-1 font-mono uppercase tracking-wider text-emerald-700"
+    <div className="rounded-2xl border border-white/70 bg-white/50 backdrop-blur-md p-2.5 shadow-sm">
+      <div className="flex items-center gap-1.5 pb-1.5 border-b border-amber-200/40">
+        <Lock className="w-2.5 h-2.5 text-amber-700" strokeWidth={2.5} />
+        <span className="font-mono text-amber-900/80" style={{ fontSize: 9 }}>
+          Изолированный контур
+        </span>
+        <span
+          className="ml-auto inline-flex items-center gap-1 font-mono text-amber-900/60"
           style={{ fontSize: 9 }}
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          активна
-        </div>
+          <Shield className="w-2.5 h-2.5" strokeWidth={2} />
+          152-ФЗ
+        </span>
       </div>
-      <div
-        className="mt-2.5 space-y-1 font-code leading-snug"
-        style={{ fontSize: 10 }}
-      >
-        <div className="text-amber-900">
-          <span className="text-amber-600 mr-1">$</span>robin sandbox start
+      {/* Three blocks: Модель / Среда / Данные */}
+      <div className="mt-2 grid grid-cols-3 gap-1">
+        <div className="rounded-md border border-amber-300/50 bg-white/70 px-1.5 py-1">
+          <div
+            className="font-mono uppercase tracking-wider text-amber-700"
+            style={{ fontSize: 7 }}
+          >
+            Модель
+          </div>
+          <div className="text-amber-900 font-medium leading-tight" style={{ fontSize: 10 }}>
+            ИИ-агент
+          </div>
         </div>
-        <div className="text-emerald-700">✓ MCP-шлюз :7842 готов</div>
-        <div className="text-emerald-700">✓ LLM Gateway подключён</div>
-        <div className="text-amber-700/80">→ контейнер изолирован</div>
-        <div className="flex items-center gap-1 text-amber-900 pt-0.5">
-          <span className="text-amber-600 mr-0.5">$</span>
-          <span
-            className="inline-block bg-amber-700 animate-pulse"
-            style={{ width: 6, height: 11 }}
-          />
+        <div className="rounded-md border border-amber-400/70 bg-amber-100/80 px-1.5 py-1">
+          <div
+            className="font-mono uppercase tracking-wider text-amber-700"
+            style={{ fontSize: 7 }}
+          >
+            Среда
+          </div>
+          <div className="text-amber-900 font-semibold leading-tight" style={{ fontSize: 10 }}>
+            ROBIN
+          </div>
+        </div>
+        <div className="rounded-md border border-amber-300/50 bg-white/70 px-1.5 py-1">
+          <div
+            className="font-mono uppercase tracking-wider text-amber-700"
+            style={{ fontSize: 7 }}
+          >
+            Данные
+          </div>
+          <div className="text-amber-900 font-medium leading-tight" style={{ fontSize: 10 }}>
+            Тестовые
+          </div>
         </div>
       </div>
     </div>
@@ -1178,13 +1727,13 @@ function SandboxMockup() {
 
 function NoCodeMockup() {
   return (
-    <div className="rounded-2xl border border-white/70 bg-white/50 backdrop-blur-md p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
+    <div className="rounded-2xl border border-white/70 bg-white/50 backdrop-blur-md p-2.5 shadow-sm">
+      <div className="flex items-center justify-between mb-1.5">
         <div
           className="font-mono uppercase tracking-wider text-rose-900/60"
-          style={{ fontSize: 9 }}
+          style={{ fontSize: 8 }}
         >
-          Visual workflow
+          Визуальный конструктор
         </div>
         <div className="flex gap-0.5">
           <div className="w-1 h-1 rounded-full bg-rose-300" />
@@ -1192,55 +1741,43 @@ function NoCodeMockup() {
           <div className="w-1 h-1 rounded-full bg-rose-500" />
         </div>
       </div>
-      <div className="space-y-1.5">
-        <WorkflowNode dot="bg-rose-500" label="Триггер: новый документ" />
+      <div className="space-y-1">
+        <WorkflowNode dot="bg-rose-500" label="Триггер" sub="новый документ" />
         <WorkflowConnector />
-        <WorkflowNode dot="bg-rose-400" label="AI: извлечь реквизиты" />
+        <WorkflowNode dot="bg-rose-400" label="AI"      sub="извлечь реквизиты" />
         <WorkflowConnector />
-        <WorkflowNode dot="bg-rose-600" label="MCP → 1С: запись" highlighted />
+        <WorkflowNode dot="bg-rose-600" label="MCP"     sub="запись в 1С" highlighted />
       </div>
     </div>
   );
 }
 
-function WorkflowNode({ dot, label, highlighted }) {
+function WorkflowNode({ dot, label, sub, highlighted }) {
   return (
     <div
-      className={`flex items-center gap-2 rounded-lg px-2.5 py-2 border shadow-sm transition-colors duration-300 ${
+      className={`flex items-center gap-1.5 rounded-md px-2 py-1 border ${
         highlighted
           ? "bg-rose-50 border-rose-300"
           : "bg-white/90 border-rose-200/70"
       }`}
     >
-      <div className={`w-1.5 h-1.5 rounded-full ${dot}`} />
-      <span
-        className="text-slate-700 font-medium"
-        style={{ fontSize: 11 }}
-      >
+      <div className={`w-1 h-1 rounded-full ${dot} flex-shrink-0`} />
+      <span className="text-slate-900 font-semibold" style={{ fontSize: 10 }}>
         {label}
       </span>
+      {sub && (
+        <span className="text-slate-500 truncate" style={{ fontSize: 9 }}>
+          · {sub}
+        </span>
+      )}
     </div>
   );
 }
 
 function WorkflowConnector() {
   return (
-    <div className="flex pl-2.5">
-      <svg
-        width="14"
-        height="10"
-        viewBox="0 0 14 10"
-        className="text-rose-300"
-        fill="none"
-      >
-        <path
-          d="M3 0 V 7 M0 5 L 3 8 L 6 5"
-          stroke="currentColor"
-          strokeWidth="1.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
+    <div className="flex pl-2.5" style={{ height: 6 }}>
+      <div className="w-px h-full bg-rose-300/70" />
     </div>
   );
 }
@@ -1249,53 +1786,39 @@ function WorkflowConnector() {
 
 function ReadyScenariosMockup() {
   const items = [
-    { label: "Сверка актов", category: "Финансы" },
-    { label: "Проверка договоров", category: "Юр" },
-    { label: "Распознавание УПД", category: "Финансы" },
+    { label: "Сверка актов",        category: "Финансы" },
+    { label: "Проверка договоров",  category: "Юр" },
+    { label: "Распознавание УПД",   category: "Финансы" },
   ];
   return (
-    <div className="rounded-2xl border border-white/70 bg-white/50 backdrop-blur-md p-3 shadow-sm">
-      <div className="flex items-center justify-between mb-2.5 px-1">
+    <div className="rounded-2xl border border-white/70 bg-white/50 backdrop-blur-md p-2.5 shadow-sm">
+      <div className="flex items-center justify-between mb-1.5 px-0.5">
         <div
           className="font-mono uppercase tracking-wider text-sky-900/60"
-          style={{ fontSize: 9 }}
+          style={{ fontSize: 8 }}
         >
           Готово к запуску
         </div>
-        <div className="font-mono text-sky-700" style={{ fontSize: 9 }}>
+        <div className="font-mono text-sky-700" style={{ fontSize: 8 }}>
           12 шт
         </div>
       </div>
-      <div className="space-y-1">
+      <div className="space-y-0.5">
         {items.map((item, i) => (
           <div
             key={i}
-            className="flex items-center gap-2 bg-white/90 rounded-lg px-2 py-1.5 border border-sky-200/60"
+            className="flex items-center gap-1.5 bg-white/90 rounded-md px-1.5 py-1 border border-sky-200/60"
           >
-            <div className="w-5 h-5 rounded-md bg-sky-50 flex items-center justify-center flex-shrink-0">
-              <CheckCircle2
-                className="w-3.5 h-3.5 text-sky-600"
-                strokeWidth={2.25}
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div
-                className="font-medium text-slate-800 truncate"
-                style={{ fontSize: 11 }}
-              >
-                {item.label}
-              </div>
-              <div
-                className="text-sky-700/70 font-mono"
-                style={{ fontSize: 9 }}
-              >
-                {item.category}
-              </div>
-            </div>
-            <Check
-              className="w-2.5 h-2.5 text-emerald-600 flex-shrink-0"
-              strokeWidth={3}
+            <CheckCircle2
+              className="w-3 h-3 text-sky-600 flex-shrink-0"
+              strokeWidth={2.25}
             />
+            <span className="font-medium text-slate-800 truncate flex-1" style={{ fontSize: 10 }}>
+              {item.label}
+            </span>
+            <span className="text-sky-700/70 font-mono flex-shrink-0" style={{ fontSize: 8 }}>
+              {item.category}
+            </span>
           </div>
         ))}
       </div>
@@ -1317,13 +1840,13 @@ function PlatformsSection() {
     <PlatformMarkCamunda />,
   ];
   return (
-    <section className="border-b border-slate-200/60">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-24">
-        <div className="text-center mb-16">
-          <SectionLabel>Платформенная совместимость</SectionLabel>
-          <h2 className="text-2xl md:text-3xl lg:text-4xl tracking-tight text-slate-900 max-w-2xl mx-auto leading-tight">
-            Работает там, где работает{" "}
-            <span className="font-display italic text-red-700">ваша команда</span>
+    <section className="border-b border-slate-200/60 bg-white">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-12 md:py-16">
+        <div className="text-center mb-8 md:mb-10">
+          <SectionLabel>Совместимость</SectionLabel>
+          <h2 className="text-xl md:text-2xl lg:text-3xl tracking-tight text-slate-900 max-w-2xl mx-auto leading-tight">
+            Интеграция с ключевыми платформами{" "}
+            <span className="font-extrabold text-slate-900">автоматизации</span>
           </h2>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-slate-200 overflow-hidden">
@@ -1392,9 +1915,9 @@ function MetricsBand() {
           {metrics.map((m, i) => (
             <div
               key={i}
-              className="border-l border-slate-800 pl-6 lg:pl-8 transition-all duration-300 hover:border-red-500"
+              className="border-l border-slate-800 pl-6 lg:pl-8 transition-all duration-300 hover:border-indigo-500"
             >
-              <div className="text-4xl md:text-5xl lg:text-6xl tracking-tight mb-2 font-display">
+              <div className="text-4xl md:text-5xl lg:text-6xl tracking-tight mb-2 font-bold">
                 {m.value}
               </div>
               <div className="text-sm text-slate-400 leading-relaxed">{m.label}</div>
@@ -1410,27 +1933,27 @@ function MetricsBand() {
 // CTA FOOTER BLOCK
 // ───────────────────────────────────────────────────────────────────────────
 
-function CtaFooterBlock({ onSandbox, onCatalog }) {
+function CtaFooterBlock({ onSandbox, onCatalog, onRegister }) {
   return (
     <section className="border-b border-slate-200/60">
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-24">
         <div className="relative rounded-2xl overflow-hidden border border-slate-200/60 bg-slate-50/40 p-12 lg:p-16">
-          <div className="absolute -top-32 -right-32 w-80 h-80 bg-red-200/40 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -top-32 -right-32 w-80 h-80 bg-indigo-200/40 rounded-full blur-3xl pointer-events-none" />
           <div className="relative max-w-2xl">
             <h2 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl tracking-tight text-slate-900 leading-tight mb-6">
-              Начните с песочницы —
+              Запросите доступ
               <br />
-              <span className="font-display italic text-red-700">без обязательств</span>
+              <span className="text-accent-gradient">к платформе</span>
             </h2>
             <p className="text-lg text-slate-600 leading-relaxed mb-8">
-              Разверните любую модель в изолированной среде за 3 минуты. API-ключи к
-              LLM не требуются — провайдер уже подключён
+              Развёртывание ИИ-агентов и RPA-сценариев в изолированной среде ROBIN.
+              LLM-провайдер настроен заранее, API-ключи на стороне клиента не требуются
             </p>
             <div className="flex flex-wrap gap-3">
-              <PrimaryButton onClick={onSandbox} icon={<Play className="w-4 h-4" />}>
-                Попробовать в Sandbox
+              <PrimaryButton onClick={onRegister} icon={<ArrowRight className="w-4 h-4" />}>
+                Зарегистрироваться в платформе
               </PrimaryButton>
-              <SandboxButton onClick={onCatalog}>Открыть каталог</SandboxButton>
+              <SandboxButton onClick={onCatalog}>Смотреть каталог</SandboxButton>
             </div>
           </div>
         </div>
@@ -1516,19 +2039,18 @@ function CatalogView({
             <span className="text-slate-900 font-medium">Каталог</span>
           </div>
           <h1 className="page-title text-2xl sm:text-3xl md:text-4xl lg:text-5xl tracking-tight text-slate-900 leading-tight mb-3 md:mb-4">
-            Каталог моделей:{" "}
-            <span className="font-display italic text-red-700">ИИ-агенты</span>
+            Каталог шаблонов решений
           </h1>
           <p className="text-base md:text-lg text-slate-600 max-w-2xl">
-            250+ моделей, API-ключи не требуются. Бесплатные модели доставляются
-            мгновенно на e-mail, платные — после согласования с менеджером.
+            Готовые ИИ-агенты, RPA-роботы и MCP-коннекторы для корпоративных задач.
+            Тестирование в безопасной песочнице после регистрации в платформе ROBIN
           </p>
         </div>
       </div>
 
       {/* Filters + Grid */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8 md:py-12">
-        <div className="flex md:gap-8">
+        <div className="flex gap-x-10 md:gap-x-12 lg:gap-x-16">
           {/* Sidebar — fixed 250px, hidden on mobile (replaced by bottom sheet) */}
           <aside
             className="hidden md:block flex-shrink-0 sticky top-24 self-start space-y-7"
@@ -1552,14 +2074,14 @@ function CatalogView({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Поиск моделей…"
-                className="w-full h-12 pl-11 pr-4 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100 transition-all duration-300"
+                placeholder="Поиск шаблонов…"
+                className="w-full h-12 pl-11 pr-4 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all duration-300"
               />
             </div>
 
             {/* Row 2 — mobile: filter button + chips horizontal scroll;
                        desktop: just chips. */}
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-6 md:mb-8">
               {/* Filter button — only on mobile */}
               <button
                 onClick={() => setBottomSheetOpen(true)}
@@ -1587,13 +2109,13 @@ function CatalogView({
             </div>
 
             {/* Counter */}
-            <div className="text-sm text-slate-500 mb-4">
+            <div className="text-sm text-slate-500 mb-6 md:mb-8">
               Найдено{" "}
               <span className="font-medium text-slate-900">
                 {visibleModels.length}
               </span>{" "}
               из {CATALOG_MODELS.length}{" "}
-              {pluralize(CATALOG_MODELS.length, ["модель", "модели", "моделей"])}
+              {pluralize(CATALOG_MODELS.length, ["шаблон", "шаблона", "шаблонов"])}
             </div>
 
             {/* Grid — 2 cols on mobile, 3 on xl */}
@@ -1725,7 +2247,7 @@ function FilterBottomSheet({
             className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl transition-colors"
           >
             Показать {resultCount}{" "}
-            {pluralize(resultCount, ["модель", "модели", "моделей"])}
+            {pluralize(resultCount, ["шаблон", "шаблона", "шаблонов"])}
           </button>
         </div>
       </div>
@@ -1738,248 +2260,242 @@ function FilterBottomSheet({
 // ───────────────────────────────────────────────────────────────────────────
 
 const CATALOG_MODELS = [
+  // ─── ИИ-агенты ─────────────────────────────────────────────────────
   {
-    id: "claude-4-6-sonnet",
-    name: "Claude 4.6 Sonnet",
-    priceIn: 3.0,
-    priceOut: 15.0,
-    contextK: 1000,
+    id: "act-reconciliation",
+    name: "Сверка актов",
     category: "Финансы",
-    provider: "Anthropic",
-    capability: "Текст",
-    type: "Текст",
-    icon: Sparkles,
-    short: "Сбалансированная модель Anthropic для агентных задач, кодинга и работы с компьютером.",
+    provider: "ROBIN Lab",
+    capability: "ИИ-агент",
+    type: "ИИ-агент",
+    icon: FileCheck,
+    short: "Автоматическая сверка актов выполненных работ с договорами и регистрами оплат.",
     description:
-      "Сбалансированная модель Anthropic с контекстом 1M токенов. Лидирует в агентных задачах, написании кода и работе с компьютером. Использует extended thinking для сложного reasoning, поддерживает tool use и multimodal-входы.",
-    platforms: ["Anthropic API", "AWS Bedrock"],
+      "Агент извлекает данные из актов, договоров и платежных регистров, сопоставляет суммы, периоды и контрагентов. Формирует отчёт о расхождениях. Сокращает закрытие месяца финансовой службой на 60-70%.",
+    platforms: ["ROBIN", "1С:ERP"],
     rating: 4.9,
-    downloads: 18420,
+    downloads: 1240,
     verified: true,
-    free: false,
-    version: "4.6",
-    author: "Anthropic",
-    updated: "2 мая 2026",
-    llms: ["Claude 4.6 Opus", "Claude 4.5 Haiku"],
-    dot: "#CC785C",
-  },
-  {
-    id: "gpt-5",
-    name: "GPT-5",
-    priceIn: 1.25,
-    priceOut: 10.0,
-    contextK: 400,
-    category: "Продажи",
-    provider: "OpenAI",
-    capability: "Текст",
-    type: "Текст",
-    icon: Sparkles,
-    short: "Флагман OpenAI для кодинга и агентных пайплайнов с надёжным tool-use.",
-    description:
-      "Флагманская модель OpenAI для кодинга и агентных задач с расширенным контекстом 400K. Превосходит GPT-4 в reasoning, multilingual-задачах и tool-use, поддерживает structured outputs и computer use.",
-    platforms: ["OpenAI API", "Azure"],
-    rating: 4.8,
-    downloads: 24150,
-    verified: true,
-    free: false,
-    version: "5.0",
-    author: "OpenAI",
-    updated: "12 апреля 2026",
-    llms: ["GPT-5 mini", "GPT-5 nano", "o3"],
-    dot: "#10A37F",
-  },
-  {
-    id: "gemini-3-1-pro",
-    name: "Gemini 3.1 Pro",
-    priceIn: 2.0,
-    priceOut: 12.0,
-    contextK: 1000,
-    category: "HR",
-    provider: "Google",
-    capability: "Видение",
-    type: "Видение",
-    icon: Sparkles,
-    short: "Frontier reasoning от Google с мультимодальным пониманием на контексте 1M.",
-    description:
-      "Frontier-модель Google для reasoning, кодирования и мультимодальных задач. Контекст 1M токенов, нативная работа с изображениями, видео и аудио. Сильна в долговременных агентных сценариях.",
-    platforms: ["Google AI Studio", "Vertex AI"],
-    rating: 4.7,
-    downloads: 15820,
-    verified: true,
-    free: false,
-    version: "3.1",
-    author: "Google DeepMind",
+    robinReady: true,
+    pricing: "Бесплатно для ROBIN",
+    free: true,
+    version: "1.8.2",
+    author: "ROBIN Lab",
     updated: "28 апреля 2026",
-    llms: ["Gemini 3 Flash", "Gemma 3.2"],
-    dot: "#4285F4",
+    llms: ["Совместимо с любыми LLM, подключёнными к ROBIN"],
+    dot: "#dc2626",
   },
   {
-    id: "llama-4-maverick",
-    name: "Llama 4 Maverick",
-    priceIn: 0.2,
-    priceOut: 0.6,
-    contextK: 130,
+    id: "contract-review",
+    name: "Проверка договоров",
     category: "Сервис",
-    provider: "Meta",
-    capability: "Видение",
-    type: "Видение",
-    icon: Sparkles,
-    short: "Открытая мультимодальная модель Meta с 17B активных параметров.",
+    provider: "ROBIN Lab",
+    capability: "ИИ-агент",
+    type: "ИИ-агент",
+    icon: Shield,
+    short: "Проверка договоров на соответствие политикам компании и выявление юридических рисков.",
     description:
-      "Открытая Mixture-of-Experts модель Meta с 17B активных параметров (из 400B общих). Поддерживает 12 языков, сильна в vision-понимании, доступна для commercial-использования по Llama Community License.",
-    platforms: ["Hugging Face", "Together AI", "Groq"],
-    rating: 4.6,
-    downloads: 9870,
+      "Анализирует тексты договоров, сопоставляет с шаблонами политики и регламентами. Помечает потенциально рискованные формулировки, нестандартные условия и отклонения от типовых форм.",
+    platforms: ["ROBIN", "СЭД"],
+    rating: 4.8,
+    downloads: 980,
     verified: true,
+    robinReady: true,
+    pricing: "Бесплатно для ROBIN",
     free: true,
-    version: "4.0",
-    author: "Meta AI",
-    updated: "15 апреля 2026",
-    llms: ["Llama 4 Scout", "Llama 3.3 70B"],
-    dot: "#0866FF",
+    version: "2.1.0",
+    author: "ROBIN Lab",
+    updated: "12 апреля 2026",
+    llms: ["Совместимо с любыми LLM, подключёнными к ROBIN"],
+    dot: "#dc2626",
   },
   {
-    id: "mistral-large-3",
-    name: "Mistral Large 3",
-    priceIn: 0.5,
-    priceOut: 1.5,
-    contextK: 256,
-    category: "Производство",
-    provider: "Mistral",
-    capability: "Текст",
-    type: "Текст",
-    icon: Sparkles,
-    short: "Первая после Mixtral MoE-модель Mistral, шаг вперёд в reasoning.",
+    id: "smart-search",
+    name: "Интеллектуальный поиск",
+    category: "Сервис",
+    provider: "ROBIN Lab",
+    capability: "ИИ-агент",
+    type: "ИИ-агент",
+    icon: Search,
+    short: "Поиск ответов по корпоративной базе знаний на естественном языке.",
     description:
-      "Mistral Large 3 — первая после Mixtral mixture-of-experts модель Mistral. Существенно улучшенный reasoning, multilingual-возможности, контекст 256K и нативный function calling.",
-    platforms: ["Mistral La Plateforme", "AWS Bedrock"],
-    rating: 4.5,
-    downloads: 6230,
-    verified: true,
-    free: false,
-    version: "3.0",
-    author: "Mistral AI",
-    updated: "20 апреля 2026",
-    llms: ["Mistral Medium 3", "Ministral 3 14B"],
-    dot: "#FA520F",
-  },
-  {
-    id: "grok-4",
-    name: "Grok 4",
-    priceIn: 3.0,
-    priceOut: 15.0,
-    contextK: 256,
-    category: "Финансы",
-    provider: "x.ai",
-    capability: "Текст",
-    type: "Текст",
-    icon: Sparkles,
-    short: "Самая мощная reasoning-модель xAI с RL-предобучением.",
-    description:
-      "Grok 4 — флагман xAI, обученный на масштабном reinforcement learning. Лидирует на сложных академических бенчмарках, поддерживает realtime-доступ к данным X (Twitter), контекст 256K.",
-    platforms: ["xAI API", "X Premium"],
-    rating: 4.6,
-    downloads: 11340,
-    verified: true,
-    free: false,
-    version: "4.0",
-    author: "xAI",
-    updated: "30 апреля 2026",
-    llms: ["Grok 4 Fast", "Grok 3"],
-    dot: "#000000",
-  },
-  {
-    id: "deepseek-v3-2",
-    name: "DeepSeek V3.2",
-    priceIn: 0.26,
-    priceOut: 0.38,
-    contextK: 160,
-    category: "Производство",
-    provider: "DeepSeek",
-    capability: "Текст",
-    type: "Текст",
-    icon: Sparkles,
-    short: "Open-source reasoning-модель GPT-5-класса со sparse attention.",
-    description:
-      "DeepSeek V3.2 — open-source модель уровня GPT-5 со sparse attention для эффективного inference. Сильные агентные возможности, контекст 160K, доступна для self-hosting.",
-    platforms: ["DeepSeek API", "Hugging Face", "Together AI"],
+      "Агент индексирует документы из корпоративных хранилищ (СЭД, файловые сервера, базы знаний) и отвечает на вопросы сотрудников на естественном языке со ссылками на источники.",
+    platforms: ["ROBIN", "СЭД", "Confluence"],
     rating: 4.7,
-    downloads: 13980,
+    downloads: 2150,
     verified: true,
+    robinReady: true,
+    pricing: "По запросу",
+    free: false,
+    version: "1.3.5",
+    author: "ROBIN Lab",
+    updated: "20 апреля 2026",
+    llms: ["Совместимо с любыми LLM, подключёнными к ROBIN"],
+    dot: "#dc2626",
+  },
+
+  // ─── RPA-роботы ────────────────────────────────────────────────────
+  {
+    id: "osv-1c-report",
+    name: "Формирование отчёта ОСВ в 1С",
+    category: "Финансы",
+    provider: "ROBIN Lab",
+    capability: "RPA",
+    type: "RPA",
+    icon: FileText,
+    short: "Автоматическое формирование оборотно-сальдовой ведомости в 1С по расписанию.",
+    description:
+      "Робот запускает 1С, формирует ОСВ по нужным счетам и периодам, выгружает в Excel или PDF, рассылает по списку получателей. Работает по расписанию или по событию.",
+    platforms: ["ROBIN", "1С:Бухгалтерия", "1С:ERP"],
+    rating: 4.8,
+    downloads: 1680,
+    verified: true,
+    robinReady: true,
+    pricing: "Бесплатно для ROBIN",
     free: true,
-    version: "3.2",
-    author: "DeepSeek AI",
-    updated: "18 апреля 2026",
-    llms: ["DeepSeek V3.1", "DeepSeek-R1"],
-    dot: "#4D6BFE",
+    version: "3.2.1",
+    author: "ROBIN Lab",
+    updated: "15 апреля 2026",
+    llms: [],
+    dot: "#2563eb",
   },
   {
-    id: "sonar-pro",
-    name: "Sonar Pro",
-    priceIn: 3.0,
-    priceOut: 15.0,
-    contextK: 200,
-    category: "Продажи",
-    provider: "Perplexity",
-    capability: "Поиск",
-    type: "Поиск",
-    icon: Sparkles,
-    short: "Live-search модель Perplexity с глубоким reasoning и точными цитатами.",
+    id: "bank-statements",
+    name: "Загрузка банковских выписок",
+    category: "Финансы",
+    provider: "ROBIN Lab",
+    capability: "RPA",
+    type: "RPA",
+    icon: Download,
+    short: "Скачивание выписок из клиент-банков и автоматическая загрузка в 1С.",
     description:
-      "Sonar Pro — live-search модель Perplexity с прямым доступом к актуальной информации в интернете. Отличается точными цитатами, глубоким reasoning и многошаговой обработкой запросов.",
-    platforms: ["Perplexity API"],
-    rating: 4.5,
-    downloads: 5640,
+      "Робот заходит в клиент-банки крупнейших российских банков, скачивает выписки за указанный период, конвертирует в нужный формат и загружает в учётную систему.",
+    platforms: ["ROBIN", "1С", "Клиент-банки"],
+    rating: 4.7,
+    downloads: 1430,
     verified: true,
-    free: false,
-    version: "Pro",
-    author: "Perplexity",
-    updated: "25 апреля 2026",
-    llms: ["Sonar", "Sonar Reasoning Pro"],
-    dot: "#1FB8CD",
+    robinReady: true,
+    pricing: "Бесплатно для ROBIN",
+    free: true,
+    version: "2.5.0",
+    author: "ROBIN Lab",
+    updated: "8 апреля 2026",
+    llms: [],
+    dot: "#2563eb",
   },
   {
-    id: "dall-e-3",
-    name: "DALL·E 3",
-    priceIn: 0.04,
-    priceOut: 0.0,
-    contextK: 4,
-    category: "Сервис",
-    provider: "OpenAI",
-    capability: "Изображение",
-    type: "Изображение",
-    icon: Sparkles,
-    short: "Генеративная модель OpenAI для фотореалистичных изображений по тексту.",
+    id: "kedo-onboarding",
+    name: "Кадровый ЭДО",
+    category: "HR",
+    provider: "ROBIN Lab",
+    capability: "RPA",
+    type: "RPA",
+    icon: Layers,
+    short: "Автоматизация кадрового электронного документооборота: приём, отпуск, увольнение.",
     description:
-      "DALL·E 3 — генеративная модель OpenAI для создания фотореалистичных изображений по текстовому промпту. Отличается точным следованием инструкциям, рендерингом текста и поддержкой различных стилей.",
-    platforms: ["OpenAI API", "ChatGPT", "Azure"],
+      "Робот формирует пакет кадровых документов на основании заявок в HR-системе, отправляет на согласование, рассылает на подписание через КЭДО, загружает в архив. Покрывает приём, перевод, отпуск, увольнение.",
+    platforms: ["ROBIN", "1С:ЗУП", "СЭД"],
     rating: 4.6,
-    downloads: 21450,
+    downloads: 870,
     verified: true,
+    robinReady: true,
+    pricing: "По запросу",
     free: false,
-    version: "3.0",
-    author: "OpenAI",
-    updated: "10 марта 2026",
-    llms: ["GPT Image 1.5", "GPT Image 1"],
-    dot: "#10A37F",
+    version: "1.9.4",
+    author: "ROBIN Lab",
+    updated: "2 апреля 2026",
+    llms: [],
+    dot: "#2563eb",
+  },
+
+  // ─── MCP-коннекторы ────────────────────────────────────────────────
+  {
+    id: "diadoc-connector",
+    name: "Коннектор: Диадок",
+    category: "Финансы",
+    provider: "ROBIN Lab",
+    capability: "MCP",
+    type: "MCP",
+    icon: Plug,
+    short: "MCP-коннектор к системе электронного документооборота Диадок от СКБ Контур.",
+    description:
+      "Универсальный коннектор для работы ИИ-агентов и RPA-роботов с Диадоком. Получение входящих документов, отправка исходящих, проверка статусов подписания, выгрузка реестров.",
+    platforms: ["ROBIN", "Диадок"],
+    rating: 4.8,
+    downloads: 720,
+    verified: true,
+    robinReady: true,
+    pricing: "Бесплатно для ROBIN",
+    free: true,
+    version: "1.4.2",
+    author: "ROBIN Lab",
+    updated: "5 апреля 2026",
+    llms: [],
+    dot: "#16a34a",
+  },
+  {
+    id: "1c-connector",
+    name: "Коннектор: 1С",
+    category: "Производство",
+    provider: "ROBIN Lab",
+    capability: "MCP",
+    type: "MCP",
+    icon: Plug,
+    short: "Универсальный MCP-коннектор для работы с любыми конфигурациями 1С.",
+    description:
+      "Подключение ИИ-агентов и роботов к 1С:ERP, 1С:Бухгалтерия, 1С:ЗУП и пользовательским конфигурациям. Чтение/запись справочников, документов, регистров. Запуск типовых операций.",
+    platforms: ["ROBIN", "1С"],
+    rating: 4.9,
+    downloads: 3210,
+    verified: true,
+    robinReady: true,
+    pricing: "Бесплатно для ROBIN",
+    free: true,
+    version: "2.7.0",
+    author: "ROBIN Lab",
+    updated: "22 апреля 2026",
+    llms: [],
+    dot: "#16a34a",
+  },
+  {
+    id: "tessa-connector",
+    name: "Коннектор: Tessa",
+    category: "Сервис",
+    provider: "ROBIN Lab",
+    capability: "MCP",
+    type: "MCP",
+    icon: Plug,
+    short: "MCP-коннектор к системе электронного документооборота Tessa от Syntellect.",
+    description:
+      "Двусторонний обмен с Tessa: получение карточек документов, маршрутизация задач, контроль статусов, выгрузка отчётов. Поддерживает кастомные типы документов.",
+    platforms: ["ROBIN", "Tessa"],
+    rating: 4.6,
+    downloads: 540,
+    verified: true,
+    robinReady: true,
+    pricing: "По запросу",
+    free: false,
+    version: "1.2.1",
+    author: "ROBIN Lab",
+    updated: "30 марта 2026",
+    llms: [],
+    dot: "#16a34a",
   },
 ];
 
 const CAP_BADGE = {
-  "Текст":       "bg-blue-50    text-blue-700",
-  "Поиск":       "bg-emerald-50 text-emerald-700",
-  "Видение":     "bg-amber-50   text-amber-700",
-  "Изображение": "bg-purple-50  text-purple-700",
+  "ИИ-агент": "bg-indigo-50     text-indigo-600",
+  "RPA":      "bg-blue-50    text-blue-700",
+  "MCP":      "bg-emerald-50 text-emerald-700",
 };
 
 const CAP_ACTIVE = {
-  "Текст":       "bg-blue-50    text-blue-700    border-blue-500",
-  "Поиск":       "bg-emerald-50 text-emerald-700 border-emerald-500",
-  "Видение":     "bg-amber-50   text-amber-700   border-amber-500",
-  "Изображение": "bg-purple-50  text-purple-700  border-purple-500",
+  "ИИ-агент": "bg-indigo-50     text-indigo-600     border-indigo-500",
+  "RPA":      "bg-blue-50    text-blue-700    border-blue-500",
+  "MCP":      "bg-emerald-50 text-emerald-700 border-emerald-500",
 };
 
-const ALL_CAPABILITIES = ["Текст", "Поиск", "Видение", "Изображение"];
+const ALL_CAPABILITIES = ["ИИ-агент", "RPA", "MCP"];
 
 function CatalogChips({ selectedSet, onToggle }) {
   return (
@@ -2005,64 +2521,93 @@ function CatalogChips({ selectedSet, onToggle }) {
 }
 
 function ModelCard({ model, delay = 0, onClick }) {
-  const capStyle = CAP_BADGE[model.capability] || CAP_BADGE["Текст"];
-  const fmtCtx = (k) => (k >= 1000 ? `${k / 1000}M` : `${k}K`);
-  const fmtPrice = (v) => `$${v.toFixed(2)}/MTok`;
+  const capStyle = CAP_BADGE[model.capability] || CAP_BADGE["ИИ-агент"];
+  const Icon = model.icon || Sparkles;
   return (
     <article
       onClick={onClick}
       className="group bg-white border border-slate-200 rounded-xl p-5 flex flex-col transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 cursor-pointer scroll-fade-in"
       style={{ animationDelay: `${0.04 * delay}s` }}
     >
-      <div className="flex items-center justify-between mb-4">
+      {/* Top row: capability badge + Стандарт ROBIN */}
+      <div className="flex items-center justify-between mb-4 gap-2">
         <span
           className={`inline-flex items-center px-2 py-0.5 rounded-md font-mono font-semibold uppercase tracking-wider ${capStyle}`}
           style={{ fontSize: 10 }}
         >
           {model.capability}
         </span>
-        <ArrowUpRight className="w-4 h-4 text-slate-300 group-hover:text-black group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all duration-300" />
+        {model.robinReady && (
+          <span
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-mono font-semibold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100"
+            style={{ fontSize: 10 }}
+            title="Решение проверено и совместимо с платформой ROBIN"
+          >
+            <Shield className="w-2.5 h-2.5" strokeWidth={2.5} />
+            Стандарт ROBIN
+          </span>
+        )}
       </div>
-      <h3 className="text-base font-semibold tracking-tight text-slate-900 mb-1.5 leading-snug">
-        {model.name}
-      </h3>
-      <div className="flex items-center gap-1.5 mb-3 text-xs">
+
+      {/* Icon + title */}
+      <div className="flex items-start gap-3 mb-2">
+        <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:bg-gradient-to-br group-hover:from-indigo-600 group-hover:to-violet-600">
+          <Icon
+            className="w-4 h-4 text-slate-700 transition-colors duration-300 group-hover:text-white"
+            strokeWidth={1.75}
+          />
+        </div>
+        <h3 className="text-base font-semibold tracking-tight text-slate-900 leading-snug pt-1">
+          {model.name}
+        </h3>
+      </div>
+
+      {/* Author + platform */}
+      <div className="flex items-center gap-1.5 mb-3 ml-12 text-xs">
         <span
           className="w-1.5 h-1.5 rounded-full flex-shrink-0"
           style={{ background: model.dot }}
         />
-        <span className="text-slate-500 font-medium">{model.provider}</span>
+        <span className="text-slate-500 font-medium truncate">{model.author}</span>
+        {model.platforms && model.platforms[0] && (
+          <>
+            <span className="text-slate-300">·</span>
+            <span className="text-slate-500 truncate">{model.platforms[0]}</span>
+          </>
+        )}
       </div>
-      <p className="text-sm text-slate-600 leading-relaxed mb-5 flex-1">
-        {model.description}
+
+      {/* Description */}
+      <p
+        className="text-sm text-slate-600 leading-relaxed mb-5 flex-1"
+        style={{ display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 3, overflow: "hidden" }}
+      >
+        {model.short}
       </p>
 
-      {/* Metrics row under divider */}
-      <div className="pt-4 mt-auto border-t border-slate-100">
-        <div className="flex items-center gap-3 text-xs flex-wrap">
-          <span className="inline-flex items-center gap-1.5 text-slate-500">
-            <Terminal className="w-3.5 h-3.5 text-slate-400" strokeWidth={2} />
-            <span className="font-mono">
-              <span className="text-slate-900 font-semibold">
-                {fmtPrice(model.priceIn)}
-              </span>
-            </span>
-          </span>
-          <span className="inline-flex items-center gap-1.5 text-slate-500">
-            <FileText className="w-3.5 h-3.5 text-slate-400" strokeWidth={2} />
-            <span className="font-mono">
-              <span className="text-slate-900 font-semibold">
-                {fmtPrice(model.priceOut)}
-              </span>
-            </span>
-          </span>
-          <span className="inline-flex items-center gap-1.5 text-slate-500">
-            <Box className="w-3.5 h-3.5 text-slate-400" strokeWidth={2} />
-            <span className="font-mono text-slate-900 font-semibold">
-              {fmtCtx(model.contextK)}
-            </span>
-          </span>
-        </div>
+      {/* Pricing line — business status instead of token-based price */}
+      <div className="flex items-center justify-between pt-4 border-t border-slate-100 text-xs">
+        <span
+          className={`inline-flex items-center gap-1.5 font-mono uppercase tracking-wider ${
+            model.free ? "text-emerald-700" : "text-slate-500"
+          }`}
+          style={{ fontSize: 10 }}
+        >
+          {model.free ? (
+            <>
+              <CheckCircle2 className="w-3 h-3" strokeWidth={2.5} />
+              {model.pricing}
+            </>
+          ) : (
+            <>
+              <Mail className="w-3 h-3" strokeWidth={2.5} />
+              {model.pricing}
+            </>
+          )}
+        </span>
+        <span className="font-mono text-slate-400" style={{ fontSize: 10 }}>
+          v{model.version}
+        </span>
       </div>
     </article>
   );
@@ -2168,11 +2713,11 @@ function ProductCard({ product, onClick, delay = 0 }) {
       style={{ animationDelay: `${0.03 * delay}s` }}
     >
       {/* Subtle gradient hover wash */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-red-50/0 via-transparent to-orange-50/40 pointer-events-none" />
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-indigo-50/0 via-transparent to-violet-50/40 pointer-events-none" />
 
       <div className="relative">
         <div className="flex items-start justify-between mb-5">
-          <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center transition-all duration-300 group-hover:bg-gradient-to-br group-hover:from-red-600 group-hover:to-orange-500">
+          <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center transition-all duration-300 group-hover:bg-gradient-to-br group-hover:from-indigo-600 group-hover:to-violet-600">
             <Icon
               className="w-5 h-5 text-slate-700 transition-colors duration-300 group-hover:text-white"
               strokeWidth={1.75}
@@ -2186,7 +2731,7 @@ function ProductCard({ product, onClick, delay = 0 }) {
         </h3>
 
         <div className="flex items-center gap-2 mb-3 text-xs">
-          <span className="font-mono uppercase tracking-wider text-red-700 font-medium">
+          <span className="font-mono uppercase tracking-wider text-indigo-600 font-medium">
             {product.type}
           </span>
           <span className="text-slate-300">·</span>
@@ -2211,7 +2756,7 @@ function ProductCard({ product, onClick, delay = 0 }) {
               {formatNumber(product.downloads)}
             </span>
           </div>
-          <ArrowUpRight className="w-4 h-4 text-slate-400 transition-all duration-300 group-hover:text-red-700 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+          <ArrowUpRight className="w-4 h-4 text-slate-400 transition-all duration-300 group-hover:text-indigo-600 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
         </div>
       </div>
     </button>
@@ -2275,7 +2820,7 @@ function ProductModal({
               </div>
 
               <div className="flex items-start gap-4 mb-6">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-red-600 to-orange-500 flex items-center justify-center flex-shrink-0">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center flex-shrink-0">
                   <Icon className="w-7 h-7 text-white" strokeWidth={1.75} />
                 </div>
                 <div className="flex-1">
@@ -2283,7 +2828,7 @@ function ProductModal({
                     {product.name}
                   </h2>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                    <span className="font-mono uppercase tracking-wider text-red-700 text-xs font-medium">
+                    <span className="font-mono uppercase tracking-wider text-indigo-600 text-xs font-medium">
                       {product.type}
                     </span>
                     <span className="text-slate-300">·</span>
@@ -2299,7 +2844,7 @@ function ProductModal({
                 <BadgePill icon={<CheckCircle2 className="w-3 h-3" />} variant="success">
                   Проверено
                 </BadgePill>
-                <BadgePill icon={<Shield className="w-3 h-3" />}>ROBIN Ready</BadgePill>
+                <BadgePill icon={<Shield className="w-3 h-3" />}>Стандарт ROBIN</BadgePill>
                 <BadgePill icon={<Plug className="w-3 h-3" />}>MCP-совместим</BadgePill>
                 <BadgePill icon={<Lock className="w-3 h-3" />}>152-ФЗ</BadgePill>
               </div>
@@ -2338,28 +2883,28 @@ function ProductModal({
                       <ul className="space-y-2 text-sm text-slate-700">
                         <li className="flex items-start gap-2.5">
                           <Check
-                            className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5"
+                            className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5"
                             strokeWidth={2.5}
                           />
                           <span>Базовый промпт-граф с настроенными узлами</span>
                         </li>
                         <li className="flex items-start gap-2.5">
                           <Check
-                            className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5"
+                            className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5"
                             strokeWidth={2.5}
                           />
                           <span>YAML-конфигурация под типовой шаблон</span>
                         </li>
                         <li className="flex items-start gap-2.5">
                           <Check
-                            className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5"
+                            className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5"
                             strokeWidth={2.5}
                           />
                           <span>MCP-коннекторы к учётным системам</span>
                         </li>
                         <li className="flex items-start gap-2.5">
                           <Check
-                            className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5"
+                            className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5"
                             strokeWidth={2.5}
                           />
                           <span>Тестовый набор и документация по доработке</span>
@@ -2446,25 +2991,19 @@ function ProductModal({
               </div>
               <p className="text-sm text-slate-500 mb-6 leading-relaxed">
                 {product.free
-                  ? "Для клиентов ROBIN — без ограничения числа запусков."
-                  : "Стоимость и условия — по запросу. Менеджер свяжется в течение 1 рабочего дня."}
+                  ? "Доступно для клиентов платформы ROBIN без ограничений по числу запусков. Требуется авторизация."
+                  : "Стоимость и условия — индивидуально. Менеджер свяжется в течение 1 рабочего дня."}
               </p>
 
-              {/* Buy / Get button */}
+              {/* CTAs per spec: «Оставить заявку», «Попробовать в ROBIN», «Купить» */}
               <div className="space-y-3 mb-6">
                 {downloadStatus === "idle" && (
                   <PrimaryButton
                     onClick={handleBuy}
                     fullWidth
-                    icon={
-                      product.free ? (
-                        <Download className="w-4 h-4" />
-                      ) : (
-                        <ArrowRight className="w-4 h-4" />
-                      )
-                    }
+                    icon={<ArrowRight className="w-4 h-4" />}
                   >
-                    {product.free ? "Получить бесплатно" : "Купить"}
+                    {product.free ? "Оставить заявку" : "Купить"}
                   </PrimaryButton>
                 )}
                 {downloadStatus === "processing" && (
@@ -2473,7 +3012,7 @@ function ProductModal({
                     className="w-full flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-slate-200 text-slate-500 font-medium"
                   >
                     <span className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-                    Подготавливаем дистрибутив…
+                    Отправляем заявку…
                   </button>
                 )}
                 {downloadStatus === "success" && (
@@ -2487,54 +3026,27 @@ function ProductModal({
                       </div>
                       <div>
                         <div className="font-medium text-emerald-900 text-sm mb-1">
-                          {product.free
-                            ? "Дистрибутив отправлен"
-                            : "Заявка принята"}
+                          Заявка принята
                         </div>
                         <p className="text-xs text-emerald-700 leading-relaxed">
-                          {product.free
-                            ? "Письмо с архивом и инструкцией придёт в течение 1 минуты. Проверьте папку «Спам»."
-                            : "Менеджер свяжется в течение 1 рабочего дня для согласования условий."}
+                          Менеджер ROBIN свяжется в течение 1 рабочего дня для
+                          подключения шаблона к вашему контуру.
                         </p>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Try in ROBIN with accordion guide */}
-                <SandboxButton
-                  fullWidth
-                  onClick={() => setRobinGuideOpen(!robinGuideOpen)}
-                  icon={
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform duration-300 ${
-                        robinGuideOpen ? "rotate-180" : ""
-                      }`}
-                    />
-                  }
+                {/* Open in ROBIN platform — external link */}
+                <a
+                  href="https://platform.robin-cloud.ru"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full inline-flex items-center justify-center gap-2 px-7 py-3 rounded-xl border-2 border-indigo-500 text-indigo-600 font-medium hover:bg-indigo-50 transition-all duration-300"
                 >
                   Попробовать в ROBIN
-                </SandboxButton>
-
-                {robinGuideOpen && (
-                  <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4 scroll-fade-in">
-                    <div className="text-xs font-mono uppercase tracking-wider text-slate-500">
-                      Тест в Sandbox за 4 шага
-                    </div>
-                    <GuideStep n={1} text="Откройте ROBIN Sandbox — изолированная среда уже развёрнута. Регистрация не требуется первые 14 дней." />
-                    <GuideStep n={2} text='Нажмите «Установить модель» в верхней панели Sandbox. Модель подгрузится автоматически.' />
-                    <GuideStep n={3} text="Загрузите тестовый документ — мы приложили 3 примера с разными типами данных." />
-                    <GuideStep n={4} text="Запустите проверку. Через ~30 секунд получите готовый отчёт." />
-                    <a
-                      href="#"
-                      onClick={(e) => e.preventDefault()}
-                      className="inline-flex items-center gap-1.5 text-sm font-medium text-red-700 hover:text-orange-500 transition-colors duration-300"
-                    >
-                      Открыть Sandbox
-                      <ArrowUpRight className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                )}
+                  <ArrowUpRight className="w-4 h-4" />
+                </a>
 
                 <button
                   onClick={onContact}
@@ -2634,59 +3146,95 @@ function BadgePill({ icon, children, variant = "default" }) {
 // SANDBOX MODAL
 // ───────────────────────────────────────────────────────────────────────────
 
-function SandboxModal({ step, setStep, onClose }) {
+function SandboxModal({ step, setStep, onClose, onGoToCatalog }) {
+  // No-code визуализация: каждая «строка» шага — блок-узел с цветной точкой
+  // и иконкой. Без терминалов и команд.
   const steps = [
     {
       title: "Запуск изолированной среды",
-      text: "Sandbox разворачивается в течение 30 секунд. Это полностью изолированная Linux-среда с предустановленным ROBIN runtime и доступом к LLM через корпоративный шлюз.",
-      log: [
-        "$ robin sandbox start --version=4.0",
-        "✓ Образ загружен (1.2 GB)",
-        "✓ MCP-шлюз поднят на порту 7842",
-        "✓ Доступ к LLM через ROBIN Gateway",
-        "→ Sandbox готов: https://sb-7842.robin.cloud",
+      text: "Песочница ROBIN разворачивается за 30 секунд. Это полностью изолированный контур с предустановленной платформой и подключённым LLM-шлюзом — никаких рисков для продуктивных систем.",
+      visual: [
+        { type: "trigger", label: "Запрос на песочницу" },
+        { type: "process", label: "Развёртывание контура ROBIN" },
+        { type: "process", label: "Подключение MCP-шлюза" },
+        { type: "process", label: "Подключение LLM Gateway" },
+        { type: "success", label: "Песочница готова" },
       ],
     },
     {
-      title: "Установка модели",
-      text: "Выберите любой модель из каталога — он установится в Sandbox одним кликом. Все зависимости подтянутся автоматически.",
-      log: [
-        "$ robin install @robin/contract-check",
-        "✓ Скачивание 14.3 MB",
-        "✓ Проверка подписи (ROBIN Ready)",
-        "✓ Установка зависимостей",
-        "→ Готово: contract-check@2.4.1",
+      title: "Установка шаблона",
+      text: "Выберите любой шаблон из каталога — он добавится в песочницу одним кликом. Все зависимости подтянутся автоматически. Никакого ручного конфигурирования.",
+      visual: [
+        { type: "trigger", label: "Выбор шаблона из каталога" },
+        { type: "process", label: "Проверка подписи ROBIN Ready" },
+        { type: "process", label: "Установка зависимостей" },
+        { type: "success", label: "Шаблон активен в песочнице" },
       ],
     },
     {
       title: "Загрузка тестовых данных",
-      text: "В Sandbox уже есть набор тестовых документов: договоры, акты, УПД, выписки из 1С. Используйте их, чтобы оценить качество без риска для боевых данных.",
-      log: [
-        "$ robin samples --product=contract-check",
-        "→ contract_typical.pdf",
-        "→ contract_with_risks.pdf",
-        "→ contract_appendix.pdf",
+      text: "К каждому шаблону приложен набор демо-документов: договоры, акты, УПД, выписки из 1С. Их можно использовать для оценки качества без касания боевых данных.",
+      visual: [
+        { type: "trigger", label: "Открыть библиотеку демо-данных" },
+        { type: "data",    label: "Договор · типовой" },
+        { type: "data",    label: "Договор · с отклонениями" },
+        { type: "data",    label: "Приложение к договору" },
       ],
     },
     {
       title: "Запуск и анализ результата",
-      text: "Модель отрабатывает за ~30 секунд и возвращает структурированный отчёт. Вы видите все шаги: какие данные прочитаны, что отправлено в LLM, какие выводы сделаны.",
-      log: [
-        "$ robin run --doc=contract_with_risks.pdf",
-        "✓ Извлечено 23 ключевых поля",
-        "✓ Сравнение с эталонным шаблоном",
-        "✓ Детектировано 3 риска средней критичности",
-        "→ Отчёт сохранён: report_2026-05-04.docx",
+      text: "Шаблон отрабатывает за ~30 секунд и возвращает структурированный отчёт. Видны все шаги: какие данные прочитаны, какие проверки выполнены, какие выводы сделаны.",
+      visual: [
+        { type: "trigger", label: "Запуск шаблона" },
+        { type: "process", label: "Извлечение реквизитов" },
+        { type: "process", label: "Сравнение с эталоном" },
+        { type: "process", label: "Детектирование рисков" },
+        { type: "success", label: "Отчёт сформирован" },
       ],
     },
   ];
+
+  const TYPE_STYLES = {
+    trigger: { bg: "bg-amber-50", border: "border-amber-200", iconBg: "bg-amber-100", iconColor: "text-amber-700", icon: Play },
+    process: { bg: "bg-white",    border: "border-slate-200", iconBg: "bg-slate-100", iconColor: "text-slate-700", icon: Cpu },
+    data:    { bg: "bg-sky-50",   border: "border-sky-200",   iconBg: "bg-sky-100",   iconColor: "text-sky-700",   icon: FileText },
+    success: { bg: "bg-emerald-50", border: "border-emerald-200", iconBg: "bg-emerald-100", iconColor: "text-emerald-700", icon: CheckCircle2 },
+  };
+
+  const NodeBlock = ({ type, label }) => {
+    const s = TYPE_STYLES[type];
+    const Icon = s.icon;
+    return (
+      <div className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg border ${s.bg} ${s.border} shadow-sm`}>
+        <div className={`w-7 h-7 rounded-md ${s.iconBg} flex items-center justify-center flex-shrink-0`}>
+          <Icon className={`w-3.5 h-3.5 ${s.iconColor}`} strokeWidth={2.25} />
+        </div>
+        <span className="text-sm font-medium text-slate-800 truncate">{label}</span>
+      </div>
+    );
+  };
+
+  const Arrow = () => (
+    <div className="flex justify-center my-1">
+      <svg width="14" height="10" viewBox="0 0 14 10" className="text-slate-300" fill="none">
+        <path
+          d="M7 0 V 7 M4 5 L 7 8 L 10 5"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </div>
+  );
 
   const current = steps[step];
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div
-        className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        style={{ maxHeight: "90vh" }}
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -2697,20 +3245,21 @@ function SandboxModal({ step, setStep, onClose }) {
         </button>
 
         {/* Header */}
-        <div className="p-8 pb-6 border-b border-slate-200/60">
-          <SectionLabel>ROBIN Sandbox</SectionLabel>
+        <div className="p-8 pb-6 border-b border-slate-200/60 flex-shrink-0">
+          <SectionLabel>Песочница ROBIN</SectionLabel>
           <h2 className="text-2xl tracking-tight text-slate-900 mb-2 leading-tight">
             Как это работает за{" "}
-            <span className="font-display italic text-red-700">4 шага</span>
+            <span className="font-extrabold text-slate-900">4 шага</span>
           </h2>
           <p className="text-sm text-slate-600 leading-relaxed">
-            Sandbox — изолированная среда исполнения. Никаких рисков для продуктивного
-            контура.
+            Безопасная среда исполнения. Никаких рисков для продуктивного контура,
+            никакого программирования.
           </p>
         </div>
 
-        {/* Step indicator */}
-        <div className="px-8 pt-6">
+        {/* Step indicator — active step uses the violet→pink→red energy gradient
+            (same colors as PrimaryButton hover) */}
+        <div className="px-8 pt-6 flex-shrink-0">
           <div className="flex items-center gap-2 mb-6">
             {steps.map((_, i) => (
               <button
@@ -2718,19 +3267,27 @@ function SandboxModal({ step, setStep, onClose }) {
                 onClick={() => setStep(i)}
                 className={`h-1 rounded-full transition-all duration-300 ${
                   i === step
-                    ? "flex-1 bg-slate-900"
+                    ? "flex-1"
                     : i < step
                     ? "flex-1 bg-slate-300"
                     : "w-8 bg-slate-200"
                 }`}
+                style={
+                  i === step
+                    ? {
+                        background:
+                          "linear-gradient(90deg, #7C3AED 0%, #EC4899 50%, #DC2626 100%)",
+                      }
+                    : undefined
+                }
               />
             ))}
           </div>
         </div>
 
         {/* Step content */}
-        <div className="px-8 pb-6">
-          <div className="text-xs font-mono uppercase tracking-wider text-red-700 mb-2">
+        <div className="px-8 pb-6 overflow-y-auto">
+          <div className="text-xs font-mono uppercase tracking-wider text-indigo-600 mb-2">
             Шаг {step + 1} из 4
           </div>
           <h3 className="text-xl font-medium tracking-tight text-slate-900 mb-3">
@@ -2738,34 +3295,32 @@ function SandboxModal({ step, setStep, onClose }) {
           </h3>
           <p className="text-slate-600 leading-relaxed mb-5">{current.text}</p>
 
-          {/* Terminal */}
-          <div className="rounded-xl bg-slate-950 overflow-hidden border border-slate-800">
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-800 bg-slate-900/50">
-              <div className="flex gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-red-400/80" />
-                <div className="w-2 h-2 rounded-full bg-yellow-400/80" />
-                <div className="w-2 h-2 rounded-full bg-green-400/80" />
+          {/* No-code visual flow */}
+          <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Layers className="w-3.5 h-3.5 text-slate-500" strokeWidth={2} />
+                <span className="text-xs font-mono uppercase tracking-wider text-slate-500">
+                  Визуальный конструктор
+                </span>
               </div>
-              <span className="font-code text-xs text-slate-500 ml-2">
-                sandbox · terminal
+              <span
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-mono uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100"
+                style={{ fontSize: 9 }}
+              >
+                No-code
               </span>
             </div>
-            <div className="p-5 font-code text-xs leading-relaxed">
-              {current.log.map((line, i) => (
-                <div
-                  key={`${step}-${i}`}
-                  className={`scroll-fade-in ${
-                    line.startsWith("$")
-                      ? "text-red-500"
-                      : line.startsWith("→")
-                      ? "text-orange-300"
-                      : line.startsWith("✓")
-                      ? "text-emerald-300"
-                      : "text-slate-400"
-                  }`}
-                  style={{ animationDelay: `${0.08 * i}s` }}
-                >
-                  {line}
+            <div className="space-y-0">
+              {current.visual.map((node, i) => (
+                <div key={`${step}-${i}`}>
+                  {i > 0 && <Arrow />}
+                  <div
+                    className="scroll-fade-in"
+                    style={{ animationDelay: `${0.08 * i}s` }}
+                  >
+                    <NodeBlock type={node.type} label={node.label} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -2773,7 +3328,7 @@ function SandboxModal({ step, setStep, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="px-8 py-5 border-t border-slate-200/60 bg-slate-50/40 flex items-center justify-between">
+        <div className="px-8 py-5 border-t border-slate-200/60 bg-slate-50/40 flex items-center justify-between flex-shrink-0">
           <button
             onClick={() => setStep(Math.max(0, step - 1))}
             disabled={step === 0}
@@ -2790,13 +3345,24 @@ function SandboxModal({ step, setStep, onClose }) {
               Дальше
             </PrimaryButton>
           ) : (
-            <PrimaryButton
-              onClick={onClose}
-              icon={<Check className="w-4 h-4" />}
-              size="sm"
-            >
-              Понятно
-            </PrimaryButton>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors duration-200"
+              >
+                Понятно
+              </button>
+              <PrimaryButton
+                onClick={() => {
+                  onClose();
+                  if (onGoToCatalog) onGoToCatalog();
+                }}
+                icon={<ArrowRight className="w-4 h-4" />}
+                size="sm"
+              >
+                Перейти в каталог
+              </PrimaryButton>
+            </div>
           )}
         </div>
       </div>
@@ -2809,254 +3375,424 @@ function SandboxModal({ step, setStep, onClose }) {
 // ───────────────────────────────────────────────────────────────────────────
 
 function ContactsView({ authorFormSubmitted, setAuthorFormSubmitted }) {
+  // Reusable gradient style for accent words
+  const gradientStyle = { fontWeight: 800, display: "inline-block", background: "linear-gradient(90deg, #7C3AED 0%, #EC4899 50%, #DC2626 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent", color: "transparent" };
+
+  const factCards = [
+    {
+      icon: Star,
+      label: "Лидерство",
+      value: "№1",
+      caption: "В Реестре отечественного ПО для автоматизации бизнеса.",
+      redAccent: true, // Heartbeat: brand red on Leadership icon
+    },
+    {
+      icon: Zap,
+      label: "Эффективность",
+      value: "80%",
+      caption: "Ускорение цикла разработки и внедрения ИИ-решений.",
+    },
+    {
+      icon: Shield,
+      label: "Безопасность",
+      value: "152-ФЗ",
+      caption: "Развёртывание в закрытом контуре с соблюдением всех стандартов.",
+    },
+  ];
+
+  const contactCards = [
+    {
+      icon: Phone,
+      title: "Связь",
+      rows: [
+        { label: "Телефон",         value: "+7 (495) 215-50-86",  href: "tel:+74952155086" },
+        { label: "Общие вопросы",   value: "info@rpa-robin.ru",   href: "mailto:info@rpa-robin.ru" },
+      ],
+    },
+    {
+      icon: Mail,
+      title: "Поддержка",
+      rows: [
+        { label: "Техподдержка",  value: "support@rpa-robin.ru",  href: "mailto:support@rpa-robin.ru" },
+        { label: "Партнёрство",   value: "partners@rpa-robin.ru", href: "mailto:partners@rpa-robin.ru" },
+      ],
+    },
+    {
+      icon: MapPin,
+      title: "Офис",
+      rows: [
+        { label: "Адрес",      value: "Москва, ул. Нижняя Красносельская, д. 35, стр. 9" },
+        { label: "Часы работы", value: "Пн–Пт · 09:00–19:00 (МСК)" },
+      ],
+    },
+  ];
+
+  const partnerBenefits = [
+    {
+      title: "1 200+ компаний",
+      text: "Корпоративная аудитория клиентов ROBIN из реестра отечественного ПО — крупный бизнес, госсектор, банки.",
+    },
+    {
+      title: "Условия партнёрства",
+      text: "Прозрачное распределение выручки, ежемесячные выплаты в рублях, без скрытых комиссий.",
+    },
+    {
+      title: "Песочница ROBIN",
+      text: "Тестирование решения в изолированной безопасной среде до публикации в каталоге.",
+    },
+  ];
+
+  const socialChannels = [
+    { name: "Telegram", handle: "@rpa_robin" },
+    { name: "VK",       handle: "vk.com/rpa.robin" },
+    { name: "YouTube",  handle: "ROBIN RPA" },
+  ];
+
   return (
     <section>
-      {/* Header */}
+      {/* ─── Hero header ──────────────────────────────────────────────── */}
       <div className="border-b border-slate-200/60">
         <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-16 lg:py-20">
           <SectionLabel>Контакты</SectionLabel>
           <h1 className="page-title text-2xl md:text-3xl lg:text-4xl xl:text-5xl tracking-tight text-slate-900 leading-tight mb-4">
-            Свяжитесь с командой{" "}
-            <span className="font-display italic text-red-700">ROBIN</span>
+            Поможем с выбором и{" "}
+            <span className="font-extrabold text-slate-900">запуском</span>
           </h1>
           <p className="text-lg text-slate-600 max-w-2xl">
-            Найдите идеальную модель для своих задач, протестируйте её в
-            песочнице или станьте автором на нашем маркетплейсе
+            Найдите идеальную модель для своих задач или станьте автором
+            на нашем маркетплейсе. Мы поможем с тестированием и внедрением
           </p>
         </div>
       </div>
 
-      {/* Contacts grid */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-16">
-        <div className="grid lg:grid-cols-2 gap-12">
-          <div>
-            <div className="text-xs font-mono uppercase tracking-wider text-slate-500 mb-3">
-              ROBIN
+      {/* ─── Contact cards (3) + Map ──────────────────────────────────── */}
+      <div className="border-b border-slate-200/60">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-16 md:py-20">
+        <div className="grid lg:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-10">
+          {contactCards.map((card, i) => (
+            <div
+              key={i}
+              className="relative rounded-3xl bg-white border border-slate-200/80 p-6 md:p-7 transition-all duration-300 hover:shadow-lg hover:shadow-slate-900/5 hover:border-slate-300"
+            >
+              <div className="flex items-center gap-3 mb-5">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100">
+                  <card.icon className="w-4.5 h-4.5 text-indigo-600" strokeWidth={2} />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 tracking-tight">
+                  {card.title}
+                </h3>
+              </div>
+              <div className="space-y-3.5">
+                {card.rows.map((row, j) => (
+                  <div key={j}>
+                    <div className="font-mono uppercase tracking-wider text-slate-500 mb-0.5" style={{ fontSize: 10 }}>
+                      {row.label}
+                    </div>
+                    {row.href ? (
+                      <a
+                        href={row.href}
+                        className="text-slate-900 font-medium hover:text-indigo-600 transition-colors duration-200 leading-snug"
+                      >
+                        {row.value}
+                      </a>
+                    ) : (
+                      <div className="text-slate-900 font-medium leading-snug">
+                        {row.value}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
+          ))}
+        </div>
 
-            <div className="space-y-1 mb-10">
-              <ContactRow
-                icon={MapPin}
-                label="Адрес офиса"
-                value="105066, Москва, ул. Нижняя Красносельская, д. 35, стр. 9"
-              />
-              <ContactRow icon={Phone} label="Телефон" value="+7 (495) 215-50-86" />
-              <ContactRow
-                icon={Mail}
-                label="Общие вопросы"
-                value="info@rpa-robin.ru"
-              />
-              <ContactRow
-                icon={Mail}
-                label="Поддержка"
-                value="support@rpa-robin.ru"
-              />
-              <ContactRow
-                icon={Mail}
-                label="Партнёрство"
-                value="partners@rpa-robin.ru"
-              />
-            </div>
+        {/* Map (compact height) + social pills */}
+        <div className="grid lg:grid-cols-3 gap-4 md:gap-6 items-start">
+          {/* Map — spans 2 columns on desktop */}
+          <div
+            className="lg:col-span-2 relative rounded-3xl border border-slate-200/80 overflow-hidden bg-slate-50"
+            style={{ height: 320 }}
+          >
+            {/* Stylized map background */}
+            <svg viewBox="0 0 400 400" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 w-full h-full opacity-40">
+              <defs>
+                <pattern id="streets-contacts" width="80" height="80" patternUnits="userSpaceOnUse">
+                  <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#cbd5e1" strokeWidth="1" />
+                  <path d="M 40 0 L 40 80 M 0 40 L 80 40" fill="none" stroke="#e2e8f0" strokeWidth="0.5" />
+                </pattern>
+              </defs>
+              <rect width="400" height="400" fill="url(#streets-contacts)" />
+              <path d="M 0 200 Q 100 150, 200 200 T 400 180" stroke="#94a3b8" strokeWidth="2" fill="none" />
+              <path d="M 200 0 L 200 400" stroke="#94a3b8" strokeWidth="1.5" />
+            </svg>
 
-            <div className="text-xs font-mono uppercase tracking-wider text-slate-500 mb-3">
-              Часы работы
-            </div>
-            <p className="text-slate-700 mb-8">Пн–Пт, 09:00–19:00 (МСК)</p>
-
-            <div className="text-xs font-mono uppercase tracking-wider text-slate-500 mb-3">
-              Каналы
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { name: "Telegram", handle: "@rpa_robin" },
-                { name: "VK", handle: "vk.com/rpa.robin" },
-                { name: "YouTube", handle: "ROBIN RPA" },
-              ].map((c) => (
-                <a
-                  key={c.name}
-                  href="#"
-                  onClick={(e) => e.preventDefault()}
-                  className="group inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-slate-200 text-sm hover:border-slate-900 transition-all duration-300"
-                >
-                  <span className="font-medium text-slate-900">{c.name}</span>
-                  <span className="text-slate-400 font-code text-xs">{c.handle}</span>
-                  <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-900 transition-colors duration-300" />
-                </a>
-              ))}
-            </div>
-          </div>
-
-          {/* Map */}
-          <div className="aspect-square lg:aspect-auto rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 relative grid-bg">
+            {/* ROBIN-style pin in center */}
             <div className="absolute inset-0 flex items-center justify-center">
-              {/* Stylized map */}
-              <svg viewBox="0 0 400 400" className="absolute inset-0 w-full h-full opacity-40">
-                <defs>
-                  <pattern id="streets" width="80" height="80" patternUnits="userSpaceOnUse">
-                    <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#cbd5e1" strokeWidth="1" />
-                    <path d="M 40 0 L 40 80 M 0 40 L 80 40" fill="none" stroke="#e2e8f0" strokeWidth="0.5" />
-                  </pattern>
-                </defs>
-                <rect width="400" height="400" fill="url(#streets)" />
-                <path d="M 0 200 Q 100 150, 200 200 T 400 180" stroke="#94a3b8" strokeWidth="2" fill="none" />
-                <path d="M 200 0 L 200 400" stroke="#94a3b8" strokeWidth="1.5" />
-              </svg>
-
-              {/* Pin */}
               <div className="relative">
-                <div className="absolute inset-0 bg-red-600 rounded-full animate-ping opacity-30" />
-                <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-red-600 to-orange-500 flex items-center justify-center shadow-lg shadow-red-600/30">
+                <div className="absolute inset-0 bg-indigo-600 rounded-full animate-ping opacity-30" />
+                <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-600/30">
                   <MapPin className="w-5 h-5 text-white" strokeWidth={2} />
                 </div>
               </div>
             </div>
-            <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
-              <div className="bg-white/95 backdrop-blur rounded-lg px-3 py-2 border border-slate-200 text-xs">
-                <div className="font-medium text-slate-900">Офис ROBIN</div>
-                <div className="text-slate-500 font-code text-xs">55.7741° N, 37.6664° E</div>
+
+            {/* Address pill — top left */}
+            <div className="absolute top-4 left-4 bg-white/95 backdrop-blur rounded-xl px-3 py-2 border border-slate-200">
+              <div className="font-bold text-slate-900 text-sm">Офис ROBIN</div>
+              <div className="text-slate-500 font-mono" style={{ fontSize: 10 }}>
+                55.7741° N, 37.6664° E
               </div>
             </div>
+
+            {/* Route button — bottom right */}
             <div className="absolute bottom-4 right-4">
-              <button className="text-xs font-medium px-3 py-2 rounded-lg bg-white border border-slate-200 hover:border-slate-900 transition-all duration-300 inline-flex items-center gap-1.5">
+              <button
+                onClick={(e) => e.preventDefault()}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full bg-white border border-slate-200 hover:border-slate-900 transition-all duration-300"
+              >
                 Построить маршрут
                 <ArrowUpRight className="w-3 h-3" />
               </button>
             </div>
           </div>
+
+          {/* Social channels card */}
+          <div className="rounded-3xl bg-white border border-slate-200/80 p-6 md:p-7 self-stretch">
+            <div className="font-mono uppercase tracking-wider text-slate-500 mb-4" style={{ fontSize: 11 }}>
+              Каналы
+            </div>
+            <div className="flex flex-col gap-2.5">
+              {socialChannels.map((c) => (
+                <a
+                  key={c.name}
+                  href="#"
+                  onClick={(e) => e.preventDefault()}
+                  className="group inline-flex items-center justify-between gap-3 px-4 py-2.5 rounded-full border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/50 transition-all duration-200"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors duration-200">
+                      {c.name}
+                    </span>
+                    <span className="text-slate-400 font-mono text-xs">{c.handle}</span>
+                  </span>
+                  <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 transition-colors duration-200" />
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
         </div>
       </div>
 
-      {/* Author form */}
-      <div className="border-t border-slate-200/60 bg-slate-50/40">
-        <div className="max-w-4xl mx-auto px-6 lg:px-8 py-20">
-          <div className="text-center mb-12">
-            <SectionLabel>Для разработчиков</SectionLabel>
-            <h2 className="text-2xl md:text-3xl lg:text-4xl tracking-tight text-slate-900 leading-tight mb-4">
-              Стать автором{" "}
-              <span className="font-display italic text-red-700">моделей</span>
+      {/* ─── About ROBIN — centered intro + 3 fact cards ──────────────── */}
+      <div className="relative border-b border-slate-200/60 bg-slate-50/40 overflow-hidden">
+        {/* Soft color blobs — provide context for glassmorphism cards */}
+        <div
+          aria-hidden
+          className="absolute bottom-0 left-[8%] w-80 h-80 bg-indigo-400/20 rounded-full blur-3xl pointer-events-none"
+        />
+        <div
+          aria-hidden
+          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-violet-400/15 rounded-full blur-3xl pointer-events-none"
+        />
+        <div
+          aria-hidden
+          className="absolute bottom-0 right-[8%] w-80 h-80 bg-blue-400/20 rounded-full blur-3xl pointer-events-none"
+        />
+
+        <div className="relative max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-16 md:py-20">
+          <div className="text-center max-w-3xl mx-auto mb-12">
+            <SectionLabel>О платформе</SectionLabel>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl tracking-tight text-slate-900 leading-tight mb-5">
+              Единая экосистема{" "}
+              <span style={gradientStyle}>автоматизации</span>
             </h2>
-            <p className="text-slate-600 max-w-2xl mx-auto leading-relaxed">
-              Если вы разрабатываете AI-агентов, RPA-сценарии или MCP-коннекторы — публикуйтесь
-              на ROBIN Artifacts. Мы возьмём на себя дистрибуцию, биллинг, поддержку первой линии
-              и сертификацию ROBIN Ready.
+            <p className="text-base md:text-lg text-slate-600 leading-relaxed">
+              Первая российская платформа интеллектуальной автоматизации,
+              объединяющая ИИ-агентов и программных роботов в едином контуре.
+              Нам доверяют лидеры банковской, страховой и промышленной сфер.
             </p>
           </div>
 
-          {/* Benefits */}
-          <div className="grid md:grid-cols-3 gap-px bg-slate-200/60 rounded-2xl overflow-hidden border border-slate-200/60 mb-10">
-            {[
-              {
-                title: "1 200+ компаний",
-                text: "Доступ к корпоративной аудитории клиентов ROBIN",
-              },
-              {
-                title: "70 / 30",
-                text: "Прозрачный rev-share в пользу автора, выплаты ежемесячно",
-              },
-              {
-                title: "Beta в Sandbox",
-                text: "Публикуйте бету и собирайте обратную связь до релиза",
-              },
-            ].map((b, i) => (
-              <div key={i} className="bg-white p-6">
-                <div className="text-2xl tracking-tight text-slate-900 font-display mb-2">
-                  {b.title}
+          {/* Glassmorphism fact cards — indigo/violet/blue tech accent */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 items-stretch max-w-5xl mx-auto">
+            {factCards.map((f, i) => (
+              <div
+                key={i}
+                className="group relative rounded-3xl bg-white/60 backdrop-blur-xl border border-white/80 shadow-xl shadow-slate-900/5 p-6 md:p-7 h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-indigo-500/25 hover:border-indigo-200/70"
+              >
+                {/* Soft inner highlight along top edge */}
+                <div
+                  aria-hidden
+                  className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent pointer-events-none"
+                />
+
+                {/* Icon — glass badge.
+                    Star/Leadership icon → solid brand red #EF3747 (heartbeat).
+                    Others → violet→pink→red SVG gradient. */}
+                <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-violet-500/10 border border-indigo-200/60 mb-5">
+                  <f.icon
+                    className={`w-5 h-5 ${f.redAccent ? "" : "icon-gradient"}`}
+                    style={f.redAccent ? { color: "#EF3747" } : undefined}
+                    strokeWidth={2}
+                  />
                 </div>
-                <p className="text-sm text-slate-600 leading-relaxed">{b.text}</p>
+
+                {/* Section label — uppercase mono */}
+                <div
+                  className="font-mono font-medium uppercase tracking-wider text-slate-500 mb-2"
+                  style={{ fontSize: 10 }}
+                >
+                  {f.label}
+                </div>
+
+                {/* Hero number — solid black, Bold */}
+                <div
+                  className="text-4xl md:text-5xl tracking-tight mb-3 text-slate-900"
+                  style={{
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                    fontWeight: 700,
+                    fontFeatureSettings: '"tnum", "cv11"',
+                    letterSpacing: "-0.03em",
+                  }}
+                >
+                  {f.value}
+                </div>
+
+                {/* Caption */}
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  {f.caption}
+                </p>
               </div>
             ))}
           </div>
+        </div>
+      </div>
 
-          {/* Form */}
-          {authorFormSubmitted ? (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-10 text-center">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-                <Check className="w-6 h-6 text-emerald-600" strokeWidth={2.5} />
-              </div>
-              <h3 className="text-xl font-medium text-emerald-900 mb-2">
-                Заявка отправлена
-              </h3>
-              <p className="text-sm text-emerald-700 max-w-md mx-auto leading-relaxed">
-                Мы свяжемся с вами в течение 2 рабочих дней. Решение по публикации — до 10
-                рабочих дней после ревью модели.
-              </p>
+      {/* ─── Partner program — benefits + form (2 columns on desktop) ──── */}
+      <div className="border-t border-slate-200/60 bg-slate-50/40">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-20 md:py-24">
+          <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
+            <SectionLabel>Партнёрская программа</SectionLabel>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl tracking-tight text-slate-900 leading-tight mb-4">
+              Опубликовать{" "}
+              <span style={gradientStyle}>решение</span>
+            </h2>
+            <p className="text-slate-600 leading-relaxed">
+              Разработчики ИИ-агентов, RPA-роботов и MCP-коннекторов могут разместить
+              свои шаблоны в каталоге ROBIN. Дистрибуция, биллинг, поддержка первой линии
+              и сертификация ROBIN Ready — на нашей стороне.
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-start">
+            {/* LEFT: Benefits as a checklist */}
+            <div className="space-y-6 lg:pt-2">
+              {partnerBenefits.map((b, i) => (
+                <div key={i} className="flex items-start gap-4">
+                  <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex-shrink-0 mt-0.5">
+                    <Check className="w-4 h-4 text-indigo-600" strokeWidth={2.5} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 leading-snug mb-1.5">
+                      {b.title}
+                    </div>
+                    <p className="text-sm md:text-base text-slate-600 leading-relaxed">
+                      {b.text}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
-          ) : (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                setAuthorFormSubmitted(true);
-              }}
-              className="bg-white rounded-2xl border border-slate-200 p-8 lg:p-10 space-y-5"
-            >
-              <div className="grid md:grid-cols-2 gap-5">
-                <FormField label="Имя и фамилия" required placeholder="Иван Петров" />
-                <FormField
-                  label="Корпоративный e-mail"
-                  required
-                  type="email"
-                  placeholder="ivan@company.ru"
-                />
-              </div>
-              <div className="grid md:grid-cols-2 gap-5">
-                <FormField label="Компания / команда" required placeholder="ООО «Команда»" />
-                <FormField
-                  label="GitHub / GitLab / сайт"
-                  type="url"
-                  placeholder="https://github.com/…"
-                />
-              </div>
-              <FormSelect
-                label="Тип модели"
-                required
-                options={[
-                  "AI-агент",
-                  "RPA-сценарий",
-                  "MCP-коннектор",
-                  "Шаблон процесса",
-                ]}
-              />
-              <FormTextarea
-                label="Краткое описание решения"
-                required
-                placeholder="Что делает модель, для какой бизнес-задачи, на каких источниках данных…"
-                maxLength={500}
-              />
 
-              <label className="flex items-start gap-3 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  required
-                  className="mt-0.5 w-4 h-4 rounded border-slate-300 text-red-700 focus:ring-2 focus:ring-red-200"
-                />
-                <span className="text-sm text-slate-600 leading-relaxed">
-                  Я согласен с{" "}
-                  <a
-                    href="#"
-                    onClick={(e) => e.preventDefault()}
-                    className="text-red-700 hover:text-orange-500 transition-colors duration-300 underline-offset-2 hover:underline"
-                  >
-                    обработкой персональных данных
-                  </a>{" "}
-                  и{" "}
-                  <a
-                    href="#"
-                    onClick={(e) => e.preventDefault()}
-                    className="text-red-700 hover:text-orange-500 transition-colors duration-300 underline-offset-2 hover:underline"
-                  >
-                    офертой автора моделей
-                  </a>
-                  .
-                </span>
-              </label>
+            {/* RIGHT: Application form in contrasted card.
+                Constrained to max-w-lg (512px) — optimal reading width for a
+                short application form. On mobile the form is full-width up to
+                this cap; on desktop it sits centered in its grid column. */}
+            <div className="w-full max-w-lg mx-auto">
+              {authorFormSubmitted ? (
+                <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-8 md:p-10 text-center">
+                  <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                    <Check className="w-6 h-6 text-emerald-600" strokeWidth={2.5} />
+                  </div>
+                  <h3 className="text-xl font-bold text-emerald-900 mb-2">
+                    Заявка отправлена
+                  </h3>
+                  <p className="text-sm text-emerald-700 max-w-md mx-auto leading-relaxed">
+                    Менеджер ROBIN свяжется в течение 2 рабочих дней. Решение по
+                    публикации — до 10 рабочих дней после проверки шаблона.
+                  </p>
+                </div>
+              ) : (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setAuthorFormSubmitted(true);
+                  }}
+                  className="bg-white rounded-3xl border border-slate-200/80 p-6 md:p-8 space-y-5 shadow-sm"
+                >
+                  <FormField label="Имя и фамилия" required placeholder="Иван Петров" />
+                  <FormField
+                    label="Корпоративный e-mail"
+                    required
+                    type="email"
+                    placeholder="ivan@company.ru"
+                  />
+                  <FormField label="Компания" required placeholder="ООО «Компания»" />
+                  <FormSelect
+                    label="Тип решения"
+                    required
+                    options={[
+                      "ИИ-агент",
+                      "RPA-робот",
+                      "MCP-коннектор",
+                      "Шаблон процесса",
+                    ]}
+                  />
+                  <FormTextarea
+                    label="Краткое описание решения"
+                    required
+                    placeholder="Что делает шаблон, для какой бизнес-задачи, на каких источниках данных…"
+                    maxLength={500}
+                  />
 
-              <div className="pt-2">
-                <PrimaryButton type="submit" icon={<Send className="w-4 h-4" />}>
-                  Отправить заявку
-                </PrimaryButton>
-              </div>
-            </form>
-          )}
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      required
+                      className="mt-0.5 w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-200"
+                    />
+                    <span className="text-sm text-slate-600 leading-relaxed">
+                      Я согласен с{" "}
+                      <a
+                        href="#"
+                        onClick={(e) => e.preventDefault()}
+                        className="text-indigo-600 hover:text-indigo-500 transition-colors duration-300 underline-offset-2 hover:underline"
+                      >
+                        обработкой персональных данных
+                      </a>{" "}
+                      и{" "}
+                      <a
+                        href="#"
+                        onClick={(e) => e.preventDefault()}
+                        className="text-indigo-600 hover:text-indigo-500 transition-colors duration-300 underline-offset-2 hover:underline"
+                      >
+                        офертой автора моделей
+                      </a>
+                      .
+                    </span>
+                  </label>
+
+                  <div className="pt-2">
+                    <PrimaryButton type="submit" icon={<Send className="w-4 h-4" />} fullWidth>
+                      Отправить заявку
+                    </PrimaryButton>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -3079,17 +3815,280 @@ function ContactRow({ icon: Icon, label, value }) {
   );
 }
 
-function FormField({ label, required, type = "text", placeholder }) {
+// ───────────────────────────────────────────────────────────────────────────
+// REGISTER VIEW — partner / customer registration page
+// Indigo-first AI design, brand red (#EF3747) micro-accents on required marks,
+// glassmorphism inputs, two-column field grid grouped by User / Company.
+// ───────────────────────────────────────────────────────────────────────────
+
+function RegisterView({ onBack }) {
+  const [submitted, setSubmitted] = useState(false);
+
+  // Reusable gradient style for the "ROBIN" word in the heading
+  const headingGradient = {
+    fontWeight: 800,
+    display: "inline-block",
+    background:
+      "linear-gradient(90deg, #7C3AED 0%, #EC4899 50%, #DC2626 100%)",
+    WebkitBackgroundClip: "text",
+    backgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    color: "transparent",
+    letterSpacing: "-0.01em",
+  };
+
+  // Success state — emerald confirmation card with link back
+  if (submitted) {
+    return (
+      <section className="relative min-h-[calc(100vh-4rem)] overflow-hidden">
+        <div
+          aria-hidden
+          className="absolute top-1/4 -left-32 w-96 h-96 bg-indigo-400/15 rounded-full blur-3xl pointer-events-none"
+        />
+        <div
+          aria-hidden
+          className="absolute bottom-1/4 -right-32 w-96 h-96 bg-violet-400/15 rounded-full blur-3xl pointer-events-none"
+        />
+        <div className="relative max-w-2xl mx-auto px-4 md:px-6 lg:px-8 py-20 md:py-28">
+          <div className="rounded-3xl border border-emerald-200 bg-emerald-50/80 backdrop-blur-xl p-10 md:p-12 text-center">
+            <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-5">
+              <Check className="w-7 h-7 text-emerald-600" strokeWidth={2.5} />
+            </div>
+            <h2 className="text-2xl md:text-3xl font-bold text-emerald-900 mb-3 tracking-tight">
+              Заявка отправлена
+            </h2>
+            <p className="text-base text-emerald-700 max-w-md mx-auto leading-relaxed mb-7">
+              Менеджер ROBIN свяжется в течение 1 рабочего дня. Доступ к
+              платформе откроется после проверки данных компании.
+            </p>
+            <button
+              onClick={onBack}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 hover:text-emerald-800 transition-colors duration-200"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              На главную
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <label className="block">
-      <div className="text-xs font-medium text-slate-700 mb-1.5">
-        {label} {required && <span className="text-red-600">*</span>}
+    <section className="relative min-h-[calc(100vh-4rem)] overflow-hidden">
+      {/* Decorative blobs — same indigo/violet system as other pages */}
+      <div
+        aria-hidden
+        className="absolute top-0 -left-32 w-[28rem] h-[28rem] bg-indigo-400/15 rounded-full blur-3xl pointer-events-none"
+      />
+      <div
+        aria-hidden
+        className="absolute bottom-0 -right-32 w-[28rem] h-[28rem] bg-violet-400/15 rounded-full blur-3xl pointer-events-none"
+      />
+
+      <div className="relative max-w-4xl mx-auto px-4 md:px-6 lg:px-8 py-12 md:py-16">
+        {/* Page heading */}
+        <div className="text-center max-w-2xl mx-auto mb-10 md:mb-12">
+          <SectionLabel>Создание аккаунта</SectionLabel>
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 leading-tight mb-4">
+            Регистрация в{" "}
+            <span style={headingGradient}>ROBIN</span>
+          </h1>
+          <p className="text-base md:text-lg text-slate-600 leading-relaxed">
+            Получите корпоративный доступ к каталогу шаблонов, песочнице и
+            инструментам платформы. Заявка обрабатывается в течение 1 рабочего дня.
+          </p>
+        </div>
+
+        {/* Form card — glassmorphism */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setSubmitted(true);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          className="relative bg-white/80 backdrop-blur-xl border border-slate-200/80 rounded-3xl shadow-xl shadow-slate-900/5 p-6 md:p-10"
+        >
+          {/* ─── Block 1: User ─────────────────────────────────────────── */}
+          <BlockHeading icon={User2} title="Пользователь" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 mb-10">
+            <RegField label="Имя" required placeholder="Иван" autoComplete="given-name" />
+            <RegField label="Фамилия" required placeholder="Петров" autoComplete="family-name" />
+            <RegField label="Отчество" placeholder="Сергеевич" autoComplete="additional-name" />
+            <RegField label="Должность" placeholder="Руководитель IT-отдела" autoComplete="organization-title" />
+            <RegField label="Email" required type="email" placeholder="ivan@company.ru" autoComplete="email" />
+            <RegField label="Логин" required placeholder="ivanpetrov" autoComplete="username" />
+            <RegField label="Пароль" required type="password" placeholder="Не менее 8 символов" autoComplete="new-password" />
+            <RegField label="Подтверждение пароля" required type="password" placeholder="Повторите пароль" autoComplete="new-password" />
+          </div>
+
+          {/* ─── Block 2: Company ──────────────────────────────────────── */}
+          <BlockHeading icon={Building2} title="Компания" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 mb-8">
+            <RegField label="Название компании" required placeholder="ООО «Компания»" autoComplete="organization" fullSpan />
+            <RegField label="ИНН" required placeholder="7700000000" inputMode="numeric" maxLength={12} />
+            <RegField label="Номер телефона" required type="tel" placeholder="+7 (___) ___-__-__" autoComplete="tel" />
+            <RegField label="Сайт" type="url" placeholder="https://company.ru" autoComplete="url" fullSpan />
+            <RegTextarea
+              label="Краткое описание деятельности"
+              placeholder="Чем занимается компания, какие процессы планируете автоматизировать..."
+              maxLength={500}
+              fullSpan
+            />
+          </div>
+
+          {/* ─── Consent footer ────────────────────────────────────────── */}
+          <div className="space-y-3.5 pt-6 mt-2 border-t border-slate-200/60">
+            <RegCheckbox required>
+              Я согласен на{" "}
+              <a
+                href="#"
+                onClick={(e) => e.preventDefault()}
+                className="text-indigo-600 hover:text-indigo-700 underline-offset-2 hover:underline transition-colors"
+              >
+                обработку персональных данных
+              </a>
+            </RegCheckbox>
+            <RegCheckbox required>
+              Я принимаю{" "}
+              <a
+                href="#"
+                onClick={(e) => e.preventDefault()}
+                className="text-indigo-600 hover:text-indigo-700 underline-offset-2 hover:underline transition-colors"
+              >
+                условия пользовательского соглашения
+              </a>
+            </RegCheckbox>
+          </div>
+
+          {/* ─── Submit + back link ────────────────────────────────────── */}
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-between gap-4 pt-7">
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex items-center justify-center gap-2 text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors duration-200 px-1"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Вернуться к входу
+            </button>
+            <PrimaryButton type="submit" icon={<ArrowRight className="w-4 h-4" />}>
+              ЗАРЕГИСТРИРОВАТЬСЯ
+            </PrimaryButton>
+          </div>
+        </form>
+      </div>
+    </section>
+  );
+}
+
+// ─── Register-form sub-components ──────────────────────────────────────────
+
+function BlockHeading({ icon: Icon, title }) {
+  return (
+    <div className="flex items-center gap-3 mb-5 pb-3 border-b border-slate-200/60">
+      <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100">
+        <Icon className="w-4 h-4 text-indigo-600" strokeWidth={2} />
+      </div>
+      <h2 className="text-lg md:text-xl font-bold tracking-tight text-slate-900">
+        {title}
+      </h2>
+    </div>
+  );
+}
+
+function RegField({
+  label,
+  required,
+  type = "text",
+  placeholder,
+  fullSpan = false,
+  ...rest
+}) {
+  return (
+    <label className={`block ${fullSpan ? "md:col-span-2" : ""}`}>
+      <div className="text-sm font-semibold text-slate-700 mb-1.5">
+        {label}
+        {required && (
+          <span className="ml-1" style={{ color: "#EF3747" }} aria-hidden>
+            *
+          </span>
+        )}
       </div>
       <input
         type={type}
         required={required}
         placeholder={placeholder}
-        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100 transition-all duration-300"
+        className="w-full px-4 py-3 bg-slate-50/80 border border-indigo-100 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white focus:ring-4 focus:ring-indigo-500/15 focus:shadow-lg focus:shadow-indigo-500/10 transition-all duration-200"
+        {...rest}
+      />
+    </label>
+  );
+}
+
+function RegTextarea({ label, required, placeholder, maxLength, fullSpan = false }) {
+  const [val, setVal] = useState("");
+  return (
+    <label className={`block ${fullSpan ? "md:col-span-2" : ""}`}>
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="text-sm font-semibold text-slate-700">
+          {label}
+          {required && (
+            <span className="ml-1" style={{ color: "#EF3747" }} aria-hidden>
+              *
+            </span>
+          )}
+        </div>
+        {maxLength && (
+          <div className="text-xs text-slate-400 font-mono">
+            {val.length} / {maxLength}
+          </div>
+        )}
+      </div>
+      <textarea
+        required={required}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        rows={3}
+        className="w-full px-4 py-3 bg-slate-50/80 border border-indigo-100 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white focus:ring-4 focus:ring-indigo-500/15 focus:shadow-lg focus:shadow-indigo-500/10 transition-all duration-200 resize-none"
+      />
+    </label>
+  );
+}
+
+function RegCheckbox({ children, required }) {
+  return (
+    <label className="flex items-start gap-3 cursor-pointer group select-none">
+      <input
+        type="checkbox"
+        required={required}
+        className="mt-0.5 w-4 h-4 rounded border-slate-300 cursor-pointer transition-all"
+        style={{ accentColor: "#4F46E5" }}
+      />
+      <span className="text-sm text-slate-600 leading-relaxed">
+        {children}
+        {required && (
+          <span className="ml-0.5" style={{ color: "#EF3747" }} aria-hidden>
+            *
+          </span>
+        )}
+      </span>
+    </label>
+  );
+}
+
+function FormField({ label, required, type = "text", placeholder }) {
+  return (
+    <label className="block">
+      <div className="text-xs font-medium text-slate-700 mb-1.5">
+        {label} {required && <span style={{ color: "#EF3747" }}>*</span>}
+      </div>
+      <input
+        type={type}
+        required={required}
+        placeholder={placeholder}
+        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all duration-300"
       />
     </label>
   );
@@ -3099,11 +4098,11 @@ function FormSelect({ label, required, options }) {
   return (
     <label className="block">
       <div className="text-xs font-medium text-slate-700 mb-1.5">
-        {label} {required && <span className="text-red-600">*</span>}
+        {label} {required && <span style={{ color: "#EF3747" }}>*</span>}
       </div>
       <select
         required={required}
-        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100 transition-all duration-300"
+        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all duration-300"
       >
         <option value="">Выберите тип…</option>
         {options.map((o) => (
@@ -3122,7 +4121,7 @@ function FormTextarea({ label, required, placeholder, maxLength }) {
     <label className="block">
       <div className="flex items-center justify-between mb-1.5">
         <div className="text-xs font-medium text-slate-700">
-          {label} {required && <span className="text-red-600">*</span>}
+          {label} {required && <span style={{ color: "#EF3747" }}>*</span>}
         </div>
         {maxLength && (
           <div className="text-xs text-slate-400 font-mono">
@@ -3137,7 +4136,7 @@ function FormTextarea({ label, required, placeholder, maxLength }) {
         value={val}
         onChange={(e) => setVal(e.target.value)}
         rows={4}
-        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-100 transition-all duration-300 resize-none"
+        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all duration-300 resize-none"
       />
     </label>
   );
@@ -3218,33 +4217,46 @@ function ContactFormModal({ onClose }) {
 
 function Footer({ setActiveTab }) {
   return (
-    <footer className="border-t border-slate-200/60 bg-white mt-16">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-12 md:py-16 lg:py-20">
-        {/* Brand block */}
-        <div className="mb-10 md:mb-14 max-w-md">
+    <footer
+      className="relative mt-16"
+      style={{ backgroundColor: "#0F172A" }}
+    >
+      {/* Top gradient hairline — transparent → indigo → transparent */}
+      <div
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent 0%, #4F46E5 50%, transparent 100%)",
+        }}
+      />
+
+      <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-14 md:py-20">
+        {/* Brand block — full width on its own row */}
+        <div className="mb-12 md:mb-16 max-w-md">
           <button
             onClick={() => setActiveTab("home")}
-            className="block mb-4 transition-opacity duration-300 hover:opacity-80"
-            aria-label="ROBIN Artifacts — на главную"
+            className="block mb-5 transition-opacity duration-300 hover:opacity-80"
+            aria-label="ROBIN — на главную"
           >
+            {/* Original red logo — high contrast on dark bg */}
             <RobinBirdLogo className="h-10 w-auto" />
           </button>
-          <p className="text-sm text-slate-500 leading-relaxed">
-            Маркетплейс ИИ-агентов, RPA-сценариев и MCP-коннекторов для корпоративного
-            сектора
+          <p
+            className="text-sm"
+            style={{ color: "#94A3B8", lineHeight: 1.7 }}
+          >
+            Маркетплейс ИИ-агентов, RPA-сценариев и MCP-коннекторов
+            для корпоративного сектора
           </p>
         </div>
 
-        {/* Three link columns — stacked on mobile, 3-col on md+ */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-y-10 gap-x-6 lg:gap-x-8 pb-12 border-b border-slate-200/60">
+        {/* Three horizontal link columns — guaranteed 3-col layout on md+
+            via injected .footer-cols CSS class. */}
+        <div className="footer-cols pb-12 md:pb-16 border-b border-white/10">
           <FooterColumn
             title="Продукт"
-            items={[
-              "Каталог моделей",
-              "Песочница",
-              "Безопасность",
-              "Интеграции",
-            ]}
+            items={["Каталог моделей", "Песочница", "Безопасность", "Интеграции"]}
           />
           <FooterColumn
             title="Компания"
@@ -3252,32 +4264,43 @@ function Footer({ setActiveTab }) {
           />
           <FooterColumn
             title="Поддержка"
-            items={[
-              "Документация",
-              "База знаний",
-              "API",
-              "Условия использования",
-            ]}
+            items={["Документация", "База знаний", "API", "Условия использования"]}
           />
         </div>
 
-        {/* Copyright */}
+        {/* Copyright row — slightly muted, separated by hairline above */}
         <div className="pt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="text-xs text-slate-400">
-            © 2026 ROBIN. Все права защищены.
+          <div
+            className="text-xs flex items-center gap-1.5"
+            style={{ color: "#64748B" }}
+          >
+            <span>© 2026 ROBIN</span>
+            {/* Brand red micro-dot — heartbeat accent in the copyright */}
+            <span
+              aria-hidden
+              className="inline-block w-1 h-1 rounded-full"
+              style={{ backgroundColor: "#EF3747" }}
+            />
+            <span>Все права защищены</span>
           </div>
           <div className="flex items-center gap-6">
             <a
               href="#"
               onClick={(e) => e.preventDefault()}
-              className="text-xs text-slate-400 hover:text-slate-700 transition-colors duration-300"
+              className="text-xs transition-colors duration-300"
+              style={{ color: "#64748B" }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#FFFFFF")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#64748B")}
             >
               Политика конфиденциальности
             </a>
             <a
               href="#"
               onClick={(e) => e.preventDefault()}
-              className="text-xs text-slate-400 hover:text-slate-700 transition-colors duration-300"
+              className="text-xs transition-colors duration-300"
+              style={{ color: "#64748B" }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#FFFFFF")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#64748B")}
             >
               Лицензия
             </a>
@@ -3290,8 +4313,8 @@ function Footer({ setActiveTab }) {
 
 function FooterColumn({ title, items }) {
   return (
-    <div>
-      <div className="text-base font-semibold tracking-tight text-slate-900 mb-5">
+    <div className="min-w-0">
+      <div className="text-sm font-semibold tracking-tight text-white mb-5">
         {title}
       </div>
       <ul className="space-y-3">
@@ -3300,7 +4323,10 @@ function FooterColumn({ title, items }) {
             <a
               href="#"
               onClick={(e) => e.preventDefault()}
-              className="text-sm text-slate-500 hover:text-red-700 transition-colors duration-300"
+              className="text-sm transition-colors duration-200"
+              style={{ color: "#94A3B8", lineHeight: 1.7 }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#FFFFFF")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#94A3B8")}
             >
               {item}
             </a>
@@ -3318,8 +4344,8 @@ function FooterColumn({ title, items }) {
 function SectionLabel({ children }) {
   return (
     <div className="inline-flex items-center gap-2 mb-4">
-      <span className="w-6 h-px bg-red-600" />
-      <span className="text-xs font-mono uppercase tracking-widest text-red-700 font-medium">
+      <span className="w-6 h-px bg-indigo-600" />
+      <span className="text-xs font-mono uppercase tracking-widest text-indigo-600 font-medium">
         {children}
       </span>
     </div>
@@ -3343,12 +4369,13 @@ function PrimaryButton({
     <button
       type={type}
       onClick={onClick}
-      className={`group relative inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white font-medium overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-red-600/30 hover:-translate-y-0.5 active:translate-y-0 ${
+      className={`group relative inline-flex items-center justify-center gap-2 rounded-full bg-indigo-600 text-white font-semibold overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-cyan-400/40 hover:-translate-y-0.5 active:translate-y-0 ${
         sizes[size]
       } ${fullWidth ? "w-full" : ""}`}
     >
-      {/* Gradient overlay that fades in on hover */}
-      <span className="absolute inset-0 bg-gradient-to-r from-red-600 to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      {/* Gradient overlay: violet → pink → red (logo brand). 
+          Bridges the indigo system back to the red logo on hover — energy pulse. */}
+      <span className="absolute inset-0 bg-gradient-to-r from-violet-600 via-pink-500 to-red-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       <span className="relative z-10 flex items-center gap-2">
         {children}
         {icon && (
@@ -3362,20 +4389,32 @@ function PrimaryButton({
 }
 
 function SandboxButton({ children, onClick, icon, fullWidth = false }) {
+  const [hovered, setHovered] = useState(false);
   return (
     <button
       onClick={onClick}
-      className={`group relative inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-red-600 via-red-500 to-orange-500 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-red-500/30 ${
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className={`relative inline-flex items-center justify-center rounded-full bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-500 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/30 ${
         fullWidth ? "w-full" : ""
       }`}
     >
       {/* Inner white panel — fades out on hover to reveal full gradient */}
-      <span className="absolute inset-px bg-white rounded-xl transition-opacity duration-150 group-hover:opacity-0" />
-      {/* Content — slate-900 over white panel, snaps to white over gradient on hover */}
-      <span className="relative z-10 flex items-center gap-2 px-6 py-3 text-sm font-medium text-slate-900 group-hover:text-white transition-colors duration-150">
+      <span
+        className="absolute inset-px bg-white rounded-full transition-opacity duration-200"
+        style={{ opacity: hovered ? 0 : 1 }}
+      />
+      {/* Content — black on white in rest, white on gradient on hover */}
+      <span
+        className="relative z-10 flex items-center gap-2 px-6 py-3 text-sm font-semibold transition-colors duration-200"
+        style={{ color: hovered ? "#FFFFFF" : "#0F172A" }}
+      >
         {children}
         {icon && (
-          <span className="transition-transform duration-300 group-hover:translate-x-0.5">
+          <span
+            className="transition-transform duration-300"
+            style={{ transform: hovered ? "translateX(2px)" : "translateX(0)" }}
+          >
             {icon}
           </span>
         )}
